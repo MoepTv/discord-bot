@@ -19,11 +19,9 @@ package tv.moep.discord.bot.managers;
  */
 
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
-import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
@@ -69,8 +67,7 @@ public class VoiceChannelManager {
         if (config.hasPath(path)) {
             List<String> ignoredRoles = config.getStringList(channelPath + ".ignoreRoles");
             for (Role role : user.getRoles(voiceChannel.getServer())) {
-                if (role.getAllowedPermissions().contains(PermissionType.ADMINISTRATOR)
-                        || ignoredRoles.contains(role.getName()) || ignoredRoles.contains(role.getIdAsString())) {
+                if (ignoredRoles.contains(role.getName()) || ignoredRoles.contains(role.getIdAsString())) {
                     return Optional.empty();
                 }
             }

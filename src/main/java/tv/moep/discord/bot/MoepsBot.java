@@ -23,8 +23,8 @@ import com.typesafe.config.ConfigFactory;
 import lombok.Getter;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
-import org.javacord.api.entity.message.Message;
-import org.javacord.api.entity.message.MessageAuthor;
+import tv.moep.discord.bot.commands.Command;
+import tv.moep.discord.bot.commands.CommandSender;
 import tv.moep.discord.bot.managers.PrivateConversationManager;
 import tv.moep.discord.bot.managers.StreamingManager;
 import tv.moep.discord.bot.managers.VoiceChannelManager;
@@ -35,9 +35,13 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletionException;
+import java.util.function.BiFunction;
 import java.util.logging.Level;
 
 @Getter
@@ -48,6 +52,8 @@ public class MoepsBot {
     public static String NAME = MoepsBot.class.getSimpleName();
 
     private Config config = ConfigFactory.load();
+
+    private Map<String, Command> commands = new HashMap<>();
 
     private DiscordApi discordApi;
 
@@ -78,7 +84,19 @@ public class MoepsBot {
 
     public MoepsBot() {
         loadConfig();
-        synchronized (this) {
+        registerCommand("reload", Permission.OPERATOR, (sender, args) -> {
+            loadConfig();
+            sender.sendMessage("Config reloaded!");
+            return true;
+        });
+        registerCommand("stop", Permission.OPERATOR, (sender, args) -> {
+            sender.sendMessage("Stopping " + NAME + " v" + VERSION);
+            synchronized (MoepsBot.this) {
+                this.notifyAll();
+            }
+            return true;
+        });
+        synchronized (MoepsBot.this) {
             try {
                 wait();
             } catch (InterruptedException ignored) { }
@@ -139,28 +157,42 @@ public class MoepsBot {
         return ConfigFactory.parseFile(new File(name + ".conf")).withFallback(ConfigFactory.load(name + ".conf"));
     }
 
-    public boolean runCommands(Message message, String commandStr) {
-        if (!hasPermission(message.getAuthor())) {
-            return false;
-        }
-        String[] args = commandStr.split(" ");
-        if (args.length > 0) {
-            if ("reload".equalsIgnoreCase(args[0])) {
-                loadConfig();
-                message.getChannel().sendMessage("Config reloaded!");
-                return true;
-            } else if ("stop".equalsIgnoreCase(args[0])) {
-                message.getChannel().sendMessage("Stopping " + NAME + " v" + VERSION);
-                synchronized (this) {
-                    this.notifyAll();
-                }
-                return true;
+    private void registerCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
+        registerCommand(new Command(usage, permission) {
+            @Override
+            public boolean execute(CommandSender sender, String[] args) {
+                return execute.apply(sender, args);
             }
-        }
-        return false;
+        });
     }
 
-    private boolean hasPermission(MessageAuthor author) {
-        return author.getId() == discordApi.getOwnerId();
+    private void registerCommand(Command command) {
+        commands.put(command.getName().toLowerCase(), command);
+        for (String alias : command.getAliases()) {
+            commands.putIfAbsent(alias, command);
+        }
+    }
+
+    private Command getCommand(String name) {
+        return commands.get(name.toLowerCase());
+    }
+
+    public boolean runCommand(CommandSender sender, String commandStr) {
+        String[] args = commandStr.split(" ");
+        if (args.length == 0) {
+            return false;
+        }
+
+        Command command = getCommand(args[0]);
+        if (command == null) {
+            return false;
+        }
+
+        if (!sender.hasPermission(command.getPermission())) {
+            sender.sendMessage("You need to at least be an " + command.getPermission() + " to run this command!");
+            return true;
+        }
+
+        return command.runCommand(sender, Arrays.copyOfRange(args, 1, args.length));
     }
 }
