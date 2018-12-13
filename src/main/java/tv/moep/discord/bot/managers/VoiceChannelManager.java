@@ -19,6 +19,8 @@ package tv.moep.discord.bot.managers;
  */
 
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigValue;
+import com.typesafe.config.ConfigValueType;
 import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
@@ -65,22 +67,32 @@ public class VoiceChannelManager {
         String channelPath = voiceChannel.getServer().getIdAsString() + "." + voiceChannel.getIdAsString();
         String path = channelPath + ".games." + activity.getName();
         if (config.hasPath(path)) {
-            List<String> ignoredRoles = config.getStringList(channelPath + ".ignoreRoles");
-            for (Role role : user.getRoles(voiceChannel.getServer())) {
-                if (ignoredRoles.contains(role.getName()) || ignoredRoles.contains(role.getIdAsString())) {
-                    return Optional.empty();
+            if (config.hasPath(channelPath + ".ignoreRoles")) {
+                List<String> ignoredRoles = config.getStringList(channelPath + ".ignoreRoles");
+                for (Role role : user.getRoles(voiceChannel.getServer())) {
+                    if (ignoredRoles.contains(role.getName()) || ignoredRoles.contains(role.getIdAsString())) {
+                        return Optional.empty();
+                    }
                 }
             }
-            ServerVoiceChannel targetChannel = voiceChannel.getServer().getVoiceChannelById(config.getString(path)).orElseGet(() -> {
+
+            ConfigValue value = config.getValue(path);
+            ServerVoiceChannel targetChannel = null;
+            if (value.valueType() == ConfigValueType.STRING) {
+                targetChannel = voiceChannel.getServer().getVoiceChannelById((String) value.unwrapped()).orElse(null);
+            }
+            if (value.valueType() == ConfigValueType.NUMBER) {
+                targetChannel = voiceChannel.getServer().getVoiceChannelById((long) value.unwrapped()).orElse(null);
+            }
+            if (targetChannel == null) {
                 List<ServerVoiceChannel> matchingChannels = voiceChannel.getServer().getVoiceChannelsByName(config.getString(path));
                 if (!matchingChannels.isEmpty()) {
-                    return matchingChannels.get(0);
+                    targetChannel = matchingChannels.get(0);
                 }
-                return null;
-            });
+            }
             if (targetChannel != null) {
                 user.move(targetChannel);
-                MoepsBot.log(Level.FINE, "Moved " + user.getMentionTag() + " from channel " + voiceChannel.getName() + "/" + voiceChannel.getIdAsString() + " to " + targetChannel.getName() + "/" + targetChannel.getIdAsString() + " because he was playing " + activity.getName());
+                MoepsBot.log(Level.FINE, "Moved " + user.getDiscriminatedName() + " from channel " + voiceChannel.getName() + "/" + voiceChannel.getIdAsString() + " to " + targetChannel.getName() + "/" + targetChannel.getIdAsString() + " because he was playing " + activity.getName());
                 return Optional.of(targetChannel);
             }
         }
