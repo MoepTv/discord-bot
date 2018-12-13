@@ -23,6 +23,9 @@ import com.typesafe.config.ConfigFactory;
 import lombok.Getter;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
+import org.javacord.api.entity.permission.PermissionType;
+import org.javacord.api.entity.permission.Permissions;
+import org.javacord.api.entity.permission.PermissionsBuilder;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
 import tv.moep.discord.bot.commands.ListCommand;
@@ -141,7 +144,19 @@ public class MoepsBot {
             joinLeaveManager = new JoinLeaveManager(this);
             textChannelManager = new TextChannelManager(this);
             messageManager = new MessageManager(this);
-            log(Level.INFO, "You can invite the bot by using the following url: " + discordApi.createBotInvite());
+            log(Level.INFO, "You can invite the bot by using the following url: "
+                    + discordApi.createBotInvite(
+                            new PermissionsBuilder()
+                                    .setAllowed(
+                                            PermissionType.MANAGE_MESSAGES,
+                                            PermissionType.READ_MESSAGES,
+                                            PermissionType.SEND_MESSAGES,
+                                            PermissionType.ADD_REACTIONS,
+                                            PermissionType.MANAGE_ROLES,
+                                            PermissionType.MANAGE_CHANNELS,
+                                            PermissionType.MOVE_MEMBERS,
+                                            PermissionType.EMBED_LINKS)
+                                    .build()));
         } catch (CompletionException e) {
             log(Level.SEVERE, "Error connecting to discord! Is the token correct?");
         }
