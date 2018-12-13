@@ -29,6 +29,7 @@ import java.util.function.BiFunction;
 
 @Getter
 public abstract class Command {
+    private final Command parent;
     private final String name;
     private final String usage;
     private final Permission permission;
@@ -39,9 +40,18 @@ public abstract class Command {
         this(usage, Permission.USER, aliases);
     }
 
+    public Command(Command parent, String usage, String... aliases) {
+        this(parent, usage, Permission.USER, aliases);
+    }
+
     public Command(String usage, Permission permission, String... aliases) {
+        this(null, usage, permission, aliases);
+    }
+
+    public Command(Command parent, String usage, Permission permission, String... aliases) {
+        this.parent = parent;
         this.name = usage.split(" ")[0];
-        this.usage = usage.contains(" ") ? usage.substring(usage.indexOf(' ')) : "";
+        this.usage = usage.contains(" ") ? usage.substring(usage.indexOf(' ') + 1) : "";
         this.permission = permission;
         this.aliases = Arrays.asList(aliases);
     }
@@ -50,6 +60,11 @@ public abstract class Command {
 
 
     public boolean runCommand(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(getPermission())) {
+            sender.sendMessage("You need to at least be an " + getPermission() + " to run this command!");
+            return true;
+        }
+
         if (args.length > 0) {
             Command subCommand = getSubCommand(args[0]);
             if (subCommand != null) {
@@ -59,8 +74,12 @@ public abstract class Command {
         return execute(sender, args);
     }
 
-    private void registerSubCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
-        registerSubCommand(new Command(usage, permission) {
+    public void registerSubCommand(String usage, BiFunction<CommandSender, String[], Boolean> execute) {
+        registerSubCommand(usage, getPermission(), execute);
+    }
+
+    public void registerSubCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
+        registerSubCommand(new Command(this, usage, permission) {
             @Override
             public boolean execute(CommandSender sender, String[] args) {
                 return execute.apply(sender, args);
@@ -68,14 +87,14 @@ public abstract class Command {
         });
     }
 
-    private void registerSubCommand(Command command) {
+    public void registerSubCommand(Command command) {
         subCommands.put(command.getName().toLowerCase(), command);
         for (String alias : command.getAliases()) {
             subCommands.putIfAbsent(alias, command);
         }
     }
 
-    private Command getSubCommand(String name) {
+    public Command getSubCommand(String name) {
         return subCommands.get(name.toLowerCase());
     }
 }

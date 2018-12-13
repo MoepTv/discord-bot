@@ -18,21 +18,7 @@ package tv.moep.discord.bot.commands;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import org.javacord.api.entity.server.Server;
-import tv.moep.discord.bot.Permission;
-
-public interface CommandSender {
-    void sendNaturalMessage(String message);
-
-    void sendMessage(String message);
-
-    void sendMessage(String title, String message);
-
-    boolean hasPermission(Permission permission);
-
-    Server getServer();
-
-    void confirm();
-
-    String getName();
+public class MessageReaction {
+    public static final String REMOVE = "\uD83D\uDDD1";
+    public static final String CONFIRM = "✅";
 }

@@ -60,7 +60,7 @@ public class StreamingManager {
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
             User user = event.getUser();
             if (event.getNewActivity().isPresent() && event.getNewActivity().get().getType() == ActivityType.STREAMING) {
-                MoepsBot.log(Level.FINE, user.getMentionTag() + " started streaming " + user.getActivity().get().getName() + " at " + user.getActivity().get().getStreamingUrl());
+                MoepsBot.log(Level.FINE, user.getDiscriminatedName() + " started streaming " + user.getActivity().get().getName() + " at " + user.getActivity().get().getStreamingUrl());
 
                 if (markChannel && (!event.getOldActivity().isPresent() || event.getOldActivity().get().getType() != ActivityType.STREAMING)) {
                     for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {

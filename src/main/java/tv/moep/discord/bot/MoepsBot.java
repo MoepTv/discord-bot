@@ -25,8 +25,12 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
+import tv.moep.discord.bot.commands.ListCommand;
+import tv.moep.discord.bot.managers.JoinLeaveManager;
+import tv.moep.discord.bot.managers.MessageManager;
 import tv.moep.discord.bot.managers.PrivateConversationManager;
 import tv.moep.discord.bot.managers.StreamingManager;
+import tv.moep.discord.bot.managers.TextChannelManager;
 import tv.moep.discord.bot.managers.VoiceChannelManager;
 
 import java.io.File;
@@ -60,6 +64,9 @@ public class MoepsBot {
     private StreamingManager streamingManager;
     private VoiceChannelManager voiceChannelManager;
     private PrivateConversationManager privateConversationManager;
+    private JoinLeaveManager joinLeaveManager;
+    private TextChannelManager textChannelManager;
+    private MessageManager messageManager;
 
     public static void main(String[] args) {
         try {
@@ -96,6 +103,7 @@ public class MoepsBot {
             }
             return true;
         });
+        registerCommand(new ListCommand(this));
         synchronized (MoepsBot.this) {
             try {
                 wait();
@@ -130,6 +138,9 @@ public class MoepsBot {
             voiceChannelManager = new VoiceChannelManager(this);
             streamingManager = new StreamingManager(this);
             privateConversationManager = new PrivateConversationManager(this);
+            joinLeaveManager = new JoinLeaveManager(this);
+            textChannelManager = new TextChannelManager(this);
+            messageManager = new MessageManager(this);
             log(Level.INFO, "You can invite the bot by using the following url: " + discordApi.createBotInvite());
         } catch (CompletionException e) {
             log(Level.SEVERE, "Error connecting to discord! Is the token correct?");
@@ -188,11 +199,11 @@ public class MoepsBot {
             return false;
         }
 
-        if (!sender.hasPermission(command.getPermission())) {
-            sender.sendMessage("You need to at least be an " + command.getPermission() + " to run this command!");
-            return true;
-        }
+        sender.confirm();
 
-        return command.runCommand(sender, Arrays.copyOfRange(args, 1, args.length));
+        if (!command.runCommand(sender, Arrays.copyOfRange(args, 1, args.length))) {
+            sender.sendMessage("Usage: " + command.getName() + " " + command.getUsage());
+        }
+        return true;
     }
 }

@@ -1,4 +1,4 @@
-package tv.moep.discord.bot.commands;
+package tv.moep.discord.bot.managers;
 
 /*
  * discordbot
@@ -18,21 +18,19 @@ package tv.moep.discord.bot.commands;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import org.javacord.api.entity.server.Server;
-import tv.moep.discord.bot.Permission;
+import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.commands.DiscordSender;
 
-public interface CommandSender {
-    void sendNaturalMessage(String message);
+public class TextChannelManager {
+    public TextChannelManager(MoepsBot moepsBot) {
+        moepsBot.getDiscordApi().addMessageCreateListener(event -> {
+            if (!event.isServerMessage()) {
+                return;
+            }
 
-    void sendMessage(String message);
-
-    void sendMessage(String title, String message);
-
-    boolean hasPermission(Permission permission);
-
-    Server getServer();
-
-    void confirm();
-
-    String getName();
+            if (event.getMessageContent().startsWith("!")) {
+                moepsBot.runCommand(new DiscordSender(event.getMessage()), event.getReadableMessageContent().substring(1));
+            }
+        });
+    }
 }

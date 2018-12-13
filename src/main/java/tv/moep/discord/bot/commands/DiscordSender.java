@@ -19,7 +19,11 @@ package tv.moep.discord.bot.commands;
  */
 
 import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.server.Server;
 import tv.moep.discord.bot.Permission;
+
+import java.awt.Color;
 
 public class DiscordSender implements CommandSender {
     private final Message message;
@@ -29,8 +33,28 @@ public class DiscordSender implements CommandSender {
     }
 
     @Override
-    public void sendMessage(String message) {
+    public void sendNaturalMessage(String message) {
         this.message.getChannel().sendMessage(message);
+    }
+
+    @Override
+    public void sendMessage(String message) {
+        this.message.getChannel().sendMessage(new EmbedBuilder()
+                .setTitle(message)
+                .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
+                .setColor(new Color((int)(Math.random() * 0x1000000)))
+        ).thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
+    }
+
+    @Override
+    public void sendMessage(String title, String message) {
+        this.message.getChannel().sendMessage(new EmbedBuilder()
+                .setAuthor(this.message.getApi().getYourself())
+                .setTitle(title)
+                .setDescription(message)
+                .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
+                .setColor(new Color((int)(Math.random() * 0x1000000)))
+        ).thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
     }
 
     @Override
@@ -39,24 +63,35 @@ public class DiscordSender implements CommandSender {
             case USER:
                 return true;
             case ADMIN:
-                if (message.getUserAuthor().isPresent()) {
-                    if (message.getServer().isPresent()) {
-                        return message.getServer().get().isAdmin(message.getUserAuthor().get());
-                    } else {
-                        return true;
-                    }
+                if (message.getUserAuthor().isPresent()
+                        && message.getServer().isPresent()
+                        && message.getServer().get().isAdmin(message.getUserAuthor().get())) {
+                    return true;
                 }
             case OWNER:
-                if (message.getUserAuthor().isPresent()) {
-                    if (message.getServer().isPresent()) {
-                        return message.getServer().get().isOwner(message.getUserAuthor().get());
-                    } else {
-                        return true;
-                    }
+                if (message.getUserAuthor().isPresent()
+                        && message.getServer().isPresent()
+                        && message.getServer().get().isOwner(message.getUserAuthor().get())) {
+                    return true;
                 }
             case OPERATOR:
-                return message.getUserAuthor().get().isBotOwner();
+                return message.getUserAuthor().isPresent() && message.getUserAuthor().get().isBotOwner();
         }
         return false;
+    }
+
+    @Override
+    public Server getServer() {
+        return message.getServer().orElse(null);
+    }
+
+    @Override
+    public void confirm() {
+        message.addReactions(MessageReaction.REMOVE);
+    }
+
+    @Override
+    public String getName() {
+        return message.getAuthor().getDisplayName();
     }
 }
