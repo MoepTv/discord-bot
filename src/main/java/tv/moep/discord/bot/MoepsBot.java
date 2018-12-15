@@ -32,6 +32,7 @@ import tv.moep.discord.bot.commands.ListCommand;
 import tv.moep.discord.bot.managers.JoinLeaveManager;
 import tv.moep.discord.bot.managers.MessageManager;
 import tv.moep.discord.bot.managers.PrivateConversationManager;
+import tv.moep.discord.bot.managers.RoleManager;
 import tv.moep.discord.bot.managers.StreamingManager;
 import tv.moep.discord.bot.managers.TextChannelManager;
 import tv.moep.discord.bot.managers.VoiceChannelManager;
@@ -70,6 +71,7 @@ public class MoepsBot {
     private JoinLeaveManager joinLeaveManager;
     private TextChannelManager textChannelManager;
     private MessageManager messageManager;
+    private RoleManager roleManager;
 
     public static void main(String[] args) {
         try {
@@ -144,6 +146,7 @@ public class MoepsBot {
             joinLeaveManager = new JoinLeaveManager(this);
             textChannelManager = new TextChannelManager(this);
             messageManager = new MessageManager(this);
+            roleManager = new RoleManager(this);
             log(Level.INFO, "You can invite the bot by using the following url: "
                     + discordApi.createBotInvite(
                             new PermissionsBuilder()
