@@ -18,17 +18,22 @@ package tv.moep.discord.bot.commands;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
+import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Permission;
 
 import java.awt.Color;
+import java.util.concurrent.CompletableFuture;
 
 public class DiscordSender implements CommandSender {
+    private final MoepsBot bot;
     private final Message message;
 
-    public DiscordSender(Message message) {
+    public DiscordSender(MoepsBot bot, Message message) {
+        this.bot = bot;
         this.message = message;
     }
 
@@ -39,22 +44,30 @@ public class DiscordSender implements CommandSender {
 
     @Override
     public void sendMessage(String message) {
-        this.message.getChannel().sendMessage(new EmbedBuilder()
+        CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(new EmbedBuilder()
                 .setTitle(message)
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
                 .setColor(new Color((int)(Math.random() * 0x1000000)))
-        ).thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
+        );
+        if (this.message.getChannel() instanceof ServerTextChannel
+                && bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
+            messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
+        }
     }
 
     @Override
     public void sendMessage(String title, String message) {
-        this.message.getChannel().sendMessage(new EmbedBuilder()
+        CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(new EmbedBuilder()
                 .setAuthor(this.message.getApi().getYourself())
                 .setTitle(title)
                 .setDescription(message)
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
                 .setColor(new Color((int)(Math.random() * 0x1000000)))
-        ).thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
+        );
+        if (this.message.getChannel() instanceof ServerTextChannel
+                && bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
+            messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
+        }
     }
 
     @Override
@@ -87,7 +100,12 @@ public class DiscordSender implements CommandSender {
 
     @Override
     public void confirm() {
-        message.addReactions(MessageReaction.REMOVE);
+        if (this.message.getChannel() instanceof ServerTextChannel
+                && bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
+            message.addReactions(MessageReaction.REMOVE);
+        } else {
+            message.addReactions(MessageReaction.CONFIRM);
+        }
     }
 
     @Override

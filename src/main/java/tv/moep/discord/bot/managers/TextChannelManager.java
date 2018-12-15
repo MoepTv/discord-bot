@@ -18,19 +18,35 @@ package tv.moep.discord.bot.managers;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import com.typesafe.config.Config;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.commands.DiscordSender;
 
 public class TextChannelManager {
+    private final Config config;
+
     public TextChannelManager(MoepsBot moepsBot) {
+        config = moepsBot.getConfig("text-channel");
+
         moepsBot.getDiscordApi().addMessageCreateListener(event -> {
-            if (!event.isServerMessage()) {
+            if (!event.getServerTextChannel().isPresent()) {
                 return;
             }
 
-            if (event.getMessageContent().startsWith("!")) {
-                moepsBot.runCommand(new DiscordSender(event.getMessage()), event.getReadableMessageContent().substring(1));
+            if (has(event.getServerTextChannel().get(), "commands") && event.getMessageContent().startsWith("!")) {
+                moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), event.getReadableMessageContent().substring(1));
             }
         });
+    }
+
+    public boolean has(ServerTextChannel channel, String option) {
+        if (config.hasPath(channel.getServer().getId() + "." + channel.getId() + "." + option)) {
+            return config.getBoolean(channel.getServer().getId() + "." + channel.getId() + "." + option);
+        }
+        if (config.hasPath(channel.getServer().getId() + "." + option)) {
+            return config.getBoolean(channel.getServer().getId() + "." + option);
+        }
+        return false;
     }
 }

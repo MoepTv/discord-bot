@@ -29,11 +29,12 @@ public class MessageManager {
                 return;
             }
 
-            if (event.getEmoji().equalsEmoji(MessageReaction.REMOVE)) {
+            if (event.getEmoji().equalsEmoji(MessageReaction.REMOVE)
+                    && (!event.getServerTextChannel().isPresent() || moepsBot.getTextChannelManager().has(event.getServerTextChannel().get(), "emojiRemoval"))) {
                 if (event.getMessageAuthor().isPresent() && (event.getMessageAuthor().get().isYourself() || event.getMessageAuthor().get().isUser())) {
                     if (!event.getServer().isPresent()
                             || event.getMessageAuthor().get().isUser()
-                            || event.getServer().get().hasAnyPermission(event.getUser(), PermissionType.MANAGE_MESSAGES)) {
+                            || (!event.getUser().isBot() && event.getServer().get().hasAnyPermission(event.getUser(), PermissionType.MANAGE_MESSAGES))) {
                         event.getMessage().get().delete();
                     } else {
                         event.getMessage()

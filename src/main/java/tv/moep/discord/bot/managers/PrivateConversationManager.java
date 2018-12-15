@@ -71,7 +71,7 @@ public class PrivateConversationManager {
             }
 
             if (event.getReadableMessageContent().startsWith("!")
-                    && moepsBot.runCommand(new DiscordSender(event.getMessage()), event.getReadableMessageContent().substring(1))) {
+                    && moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), event.getReadableMessageContent().substring(1))) {
                 return;
             }
 
