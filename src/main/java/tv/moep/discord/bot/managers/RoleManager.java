@@ -64,6 +64,11 @@ public class RoleManager {
     }
 
     private void updateRoles(User user, Activity activity, Server server) {
+        if (activity != null && config.hasPath(server.getId() + ".dynamicPrefix." + activity.getType().name().toLowerCase())) {
+            for (Role role : server.getRolesByNameIgnoreCase(server.getId() + ".dynamicPrefix." + activity.getType().name().toLowerCase() + activity.getName())) {
+                user.addRole(role);
+            }
+        }
         for (String roleId : config.getConfig(server.getIdAsString()).root().keySet()) {
             Optional<Role> role = server.getRoleById(roleId);
             if (role.isPresent()) {
