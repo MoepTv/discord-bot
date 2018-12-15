@@ -18,9 +18,14 @@ package tv.moep.discord.bot.managers;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.permission.PermissionType;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.commands.MessageReaction;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class MessageManager {
     public MessageManager(MoepsBot moepsBot) {
@@ -31,18 +36,25 @@ public class MessageManager {
 
             if (event.getEmoji().equalsEmoji(MessageReaction.REMOVE)
                     && (!event.getServerTextChannel().isPresent() || moepsBot.getTextChannelManager().has(event.getServerTextChannel().get(), "emojiRemoval"))) {
-                if (event.getMessageAuthor().isPresent() && (event.getMessageAuthor().get().isYourself() || event.getMessageAuthor().get().isUser())) {
-                    if (!event.getServer().isPresent()
-                            || event.getMessageAuthor().get().isUser()
-                            || (!event.getUser().isBot() && event.getServer().get().hasAnyPermission(event.getUser(), PermissionType.MANAGE_MESSAGES))) {
-                        event.getMessage().get().delete();
+                Message message = event.getMessage().orElseGet(() -> {
+                    try {
+                        return event.getChannel().getMessageById(event.getMessageId()).get(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (TimeoutException ignored) {}
+                    return null;
+                });
+                if (message != null) {
+                    if ((!event.getUser().isBot() && event.getUser().equals(message.getUserAuthor().orElse(null)))
+                            || (!event.getServer().isPresent() && (message.getAuthor().isYourself() || event.getUser().equals(message.getUserAuthor().orElse(null))))
+                            || (!event.getUser().isBot() && event.getServer().isPresent() && event.getServer().get().hasAnyPermission(event.getUser(), PermissionType.MANAGE_MESSAGES))) {
+                        message.delete();
                     } else {
-                        event.getMessage()
-                                .map(m -> m.getEmbeds().isEmpty() ? null : m.getEmbeds().get(0))
-                                .map(e -> e.getFooter().orElse(null))
+                        if (!message.getEmbeds().isEmpty())
+                            message.getEmbeds().get(0).getFooter()
                                 .map(f -> f.getText().orElse(null))
                                 .filter(f -> f.endsWith(event.getUser().getDiscriminatedName()))
-                                .ifPresent(f -> event.getMessage().get().delete());
+                                .ifPresent(f -> message.delete());
                     }
                 }
             }
