@@ -23,7 +23,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigMergeable;
 import lombok.Data;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.util.NonThrowingAutoCloseable;
@@ -57,7 +56,10 @@ public class PrivateConversationManager {
         config = moepsBot.getConfig("private-conversation");
         lastMessage = CacheBuilder.newBuilder().maximumSize(config.getLong("lastMessage.cacheSize")).build();
         lastMessageCooldown = config.getLong("lastMessage.cooldown");
-        ConfigMergeable defaultConfig = ConfigFactory.parseMap(ImmutableMap.of(
+        if (config.hasPath("enabled") && !config.getBoolean("enabled")) {
+            return;
+        }
+        Config defaultConfig = ConfigFactory.parseMap(ImmutableMap.of(
                 "onlyOnce", false,
                 "triggers", new ArrayList<String>(),
                 "responses", new ArrayList<String>()
