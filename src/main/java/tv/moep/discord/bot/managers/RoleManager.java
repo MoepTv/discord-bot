@@ -21,8 +21,10 @@ package tv.moep.discord.bot.managers;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
 
@@ -33,49 +35,59 @@ import java.util.Optional;
 public class RoleManager {
     public static final String REGEX_PREFIX = "r=";
     private final Config config;
+    private final Config defaultRoleConfig = ConfigFactory.parseMap(ImmutableMap.of(
+            "playing", new ArrayList<String>(),
+            "streaming", new ArrayList<String>(),
+            "listening", new ArrayList<String>(),
+            "watching", new ArrayList<String>(),
+            "temporary", false
+    ));
 
     public RoleManager(MoepsBot moepsBot) {
         config = moepsBot.getConfig("roles");
 
-        Config defaultConfig = ConfigFactory.parseMap(ImmutableMap.of(
-                "playing", new ArrayList<String>(),
-                "streaming", new ArrayList<String>(),
-                "listening", new ArrayList<String>(),
-                "watching", new ArrayList<String>(),
-                "temporary", false
-        ));
+        for (Server server : moepsBot.getDiscordApi().getServers()) {
+            if (config.hasPath(server.getIdAsString())) {
+                for (User user : server.getMembers()) {
+                    updateRoles(user, user.getActivity().orElse(null), server);
+                }
+            }
+        }
 
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
             for (Server server : event.getUser().getMutualServers()) {
                 if (config.hasPath(server.getIdAsString())) {
-                    for (String roleId : config.getConfig(server.getIdAsString()).root().keySet()) {
-                        Optional<Role> role = server.getRoleById(roleId);
-                        if (role.isPresent()) {
-                            Config roleConfig = config.getConfig(server.getIdAsString() + "." + roleId).withFallback(defaultConfig);
-                            boolean matches = false;
-                            if (event.getNewActivity().isPresent()) {
-                                List<String> matching = Utils.getList(roleConfig, event.getNewActivity().get().getType().name().toLowerCase());
-                                for (String match : matching) {
-                                    if (event.getNewActivity().get().getName().equalsIgnoreCase(match) ||
-                                            (match.startsWith(REGEX_PREFIX) && event.getNewActivity().get().getName().matches(match.substring(REGEX_PREFIX.length())))) {
-                                        matches = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-
-                            if (matches) {
-                                if (!event.getUser().getRoles(server).contains(role.get())) {
-                                    event.getUser().addRole(role.get());
-                                }
-                            } else if (roleConfig.getBoolean("temporary") && event.getUser().getRoles(server).contains(role.get())) {
-                                event.getUser().removeRole(role.get());
-                            }
-                        }
-                    }
+                    updateRoles(event.getUser(), event.getNewActivity().orElse(null), server);
                 }
             }
         });
+    }
+
+    private void updateRoles(User user, Activity activity, Server server) {
+        for (String roleId : config.getConfig(server.getIdAsString()).root().keySet()) {
+            Optional<Role> role = server.getRoleById(roleId);
+            if (role.isPresent()) {
+                Config roleConfig = config.getConfig(server.getIdAsString() + "." + roleId).withFallback(defaultRoleConfig);
+                boolean matches = false;
+                if (activity != null) {
+                    List<String> matching = Utils.getList(roleConfig, activity.getType().name().toLowerCase());
+                    for (String match : matching) {
+                        if (activity.getName().equalsIgnoreCase(match)
+                                || (match.startsWith(REGEX_PREFIX) && activity.getName().matches(match.substring(REGEX_PREFIX.length())))) {
+                            matches = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (matches) {
+                    if (!user.getRoles(server).contains(role.get())) {
+                        user.addRole(role.get());
+                    }
+                } else if (roleConfig.getBoolean("temporary") && user.getRoles(server).contains(role.get())) {
+                    user.removeRole(role.get());
+                }
+            }
+        }
     }
 }
