@@ -22,6 +22,7 @@ import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Permission;
 
@@ -96,6 +97,10 @@ public class DiscordSender implements CommandSender {
     @Override
     public Server getServer() {
         return message.getServer().orElse(null);
+    }
+
+    public User getUser() {
+        return message.getUserAuthor().orElse(null);
     }
 
     @Override

@@ -186,7 +186,7 @@ public class MoepsBot {
         return ConfigFactory.parseFile(new File(name + ".conf")).withFallback(ConfigFactory.load(name + ".conf"));
     }
 
-    private void registerCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
+    public void registerCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
         registerCommand(new Command(usage, permission) {
             @Override
             public boolean execute(CommandSender sender, String[] args) {
@@ -195,7 +195,7 @@ public class MoepsBot {
         });
     }
 
-    private void registerCommand(Command command) {
+    public void registerCommand(Command command) {
         commands.put(command.getName().toLowerCase(), command);
         for (String alias : command.getAliases()) {
             commands.putIfAbsent(alias, command);

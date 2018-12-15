@@ -22,11 +22,14 @@ import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.javacord.api.entity.activity.Activity;
+import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.Permission;
 import tv.moep.discord.bot.Utils;
+import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,17 +58,72 @@ public class RoleManager {
         }
 
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
-            for (Server server : event.getUser().getMutualServers()) {
-                if (config.hasPath(server.getIdAsString())) {
-                    updateRoles(event.getUser(), event.getNewActivity().orElse(null), server);
-                }
-            }
+            updateRoles(event.getUser(), event.getNewActivity().orElse(null));
         });
+
+        for (ActivityType type : ActivityType.values()) {
+            moepsBot.registerCommand(type.name() + " <name>".toLowerCase(), Permission.USER, (sender, args) -> {
+                if (sender instanceof DiscordSender) {
+                    if (args.length > 0) {
+                        if (updateRoles(((DiscordSender) sender).getUser(), type, String.join(" ", args), sender.getServer())) {
+                            sender.sendMessage("Set role for `" + String.join(" ", args) + "`");
+                        } else {
+                            sender.sendMessage("No role for `" + String.join(" ", args) + "` found!");
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+                sender.sendMessage("Can only be run by a discord user!");
+                return true;
+            });
+        }
     }
 
-    private void updateRoles(User user, Activity activity, Server server) {
-        if (activity != null && config.hasPath(server.getId() + ".dynamicPrefix." + activity.getType().name().toLowerCase())) {
-            for (Role role : server.getRolesByNameIgnoreCase(server.getId() + ".dynamicPrefix." + activity.getType().name().toLowerCase() + activity.getName())) {
+    private boolean updateRoles(User user, Activity activity) {
+        boolean r = false;
+        for (Server server : user.getMutualServers()) {
+            if (config.hasPath(server.getIdAsString())) {
+                r |= updateRoles(user, activity, server);
+            }
+        }
+        return r;
+    }
+
+    private boolean updateRoles(User user, ActivityType type, String name) {
+        boolean r = false;
+        for (Server server : user.getMutualServers()) {
+            if (config.hasPath(server.getIdAsString())) {
+                r |= updateRoles(user, type, name, server);
+            }
+        }
+        return r;
+    }
+
+    private boolean updateRoles(User user, Activity activity, Server server) {
+        if (activity != null) {
+            return updateRoles(user, activity.getType(), activity.getName(), server);
+        } else {
+            return updateRoles(user, null, null, server);
+        }
+    }
+
+    private boolean updateRoles(User user, ActivityType type, String name, Server server) {
+        if (user == null) {
+            return false;
+        }
+
+        if (server == null) {
+            return updateRoles(user, type, name);
+        }
+
+        if (!config.hasPath(server.getIdAsString())) {
+            return false;
+        }
+        boolean r = false;
+        if (type != null && config.hasPath(server.getId() + ".dynamicPrefix." + type.name().toLowerCase())) {
+            for (Role role : server.getRolesByNameIgnoreCase(config.getString(server.getId() + ".dynamicPrefix." + type.name().toLowerCase()) + name)) {
+                r = true;
                 user.addRole(role);
             }
         }
@@ -74,11 +132,11 @@ public class RoleManager {
             if (role.isPresent()) {
                 Config roleConfig = config.getConfig(server.getIdAsString() + "." + roleId).withFallback(defaultRoleConfig);
                 boolean matches = false;
-                if (activity != null) {
-                    List<String> matching = Utils.getList(roleConfig, activity.getType().name().toLowerCase());
+                if (type != null) {
+                    List<String> matching = Utils.getList(roleConfig, type.name().toLowerCase());
                     for (String match : matching) {
-                        if (activity.getName().equalsIgnoreCase(match)
-                                || (match.startsWith(REGEX_PREFIX) && activity.getName().matches(match.substring(REGEX_PREFIX.length())))) {
+                        if (name.equalsIgnoreCase(match)
+                                || (match.startsWith(REGEX_PREFIX) && name.matches(match.substring(REGEX_PREFIX.length())))) {
                             matches = true;
                             break;
                         }
@@ -89,10 +147,12 @@ public class RoleManager {
                     if (!user.getRoles(server).contains(role.get())) {
                         user.addRole(role.get());
                     }
+                    r = true;
                 } else if (roleConfig.getBoolean("temporary") && user.getRoles(server).contains(role.get())) {
                     user.removeRole(role.get());
                 }
             }
         }
+        return r;
     }
 }
