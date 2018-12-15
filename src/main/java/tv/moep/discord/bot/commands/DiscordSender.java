@@ -49,8 +49,8 @@ public class DiscordSender implements CommandSender {
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
                 .setColor(new Color((int)(Math.random() * 0x1000000)))
         );
-        if (this.message.getChannel() instanceof ServerTextChannel
-                && bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
+        if (!(this.message.getChannel() instanceof ServerTextChannel)
+                || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
             messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
         }
     }
@@ -64,8 +64,8 @@ public class DiscordSender implements CommandSender {
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
                 .setColor(new Color((int)(Math.random() * 0x1000000)))
         );
-        if (this.message.getChannel() instanceof ServerTextChannel
-                && bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
+        if (!(this.message.getChannel() instanceof ServerTextChannel)
+                || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
             messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
         }
     }
