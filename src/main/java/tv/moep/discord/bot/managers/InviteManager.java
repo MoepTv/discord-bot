@@ -31,10 +31,12 @@ import tv.moep.discord.bot.Utils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class InviteManager {
     private final Config config;
@@ -109,10 +111,20 @@ public class InviteManager {
             server.getRoleById(inviteRole).ifPresent(user::addRole);
         }
 
+        List<Role> availableRoles = dynamicRoles.get(server.getId()).stream()
+                .map(id -> server.getRoleById(id).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        Role addRole = null;
         for (Role role : invite.getInviter().getRoles(server)) {
-            if (dynamicRoles.get(server.getId()).contains(role.getIdAsString())) {
-                user.addRole(role);
+            for (Role availableRole : availableRoles) {
+                if (role.getPosition() <= availableRole.getPosition()  && (addRole == null || availableRole.getPosition() < addRole.getPosition())) {
+                    addRole = availableRole;
+                }
             }
+        }
+        if (addRole != null) {
+            user.addRole(addRole);
         }
     }
 }
