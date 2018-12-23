@@ -68,7 +68,7 @@ public class InviteManager {
                                 foundInvite = invite;
                                 break;
                             }
-                        } else if (invite.getUses() < invite.getMaxUses() && invite.getCreationTimestamp().plusSeconds(invite.getMaxAgeInSeconds()).isAfter(Instant.now())) {
+                        } else if (isValid(invite)) {
                             if (foundInvite == null || invite.getCreationTimestamp().isAfter(foundInvite.getCreationTimestamp())) {
                                 // Assume missing invite and use last created invite
                                 foundInvite = invite;
@@ -86,13 +86,19 @@ public class InviteManager {
         moepsBot.getScheduler().scheduleAtFixedRate(this::checkForNewInvites, 5, 5, TimeUnit.MINUTES);
     }
 
+    private boolean isValid(RichInvite invite) {
+        return !invite.isRevoked()
+                && (invite.getMaxUses() == 0 || invite.getUses() < invite.getMaxUses())
+                && (!invite.isTemporary() || invite.getCreationTimestamp().plusSeconds(invite.getMaxAgeInSeconds()).isAfter(Instant.now()));
+    }
+
     private void checkForNewInvites() {
         for (Server server : moepsBot.getDiscordApi().getServers()) {
             if (config.hasPath(server.getIdAsString())) {
                 Map<String, Integer> inviteMap = inviteCounts.computeIfAbsent(server.getId(), id -> new ConcurrentHashMap<>());
                 try {
                     for (RichInvite invite : server.getInvites().get()) {
-                        if (invite.getUses() < invite.getMaxUses()) {
+                        if (isValid(invite)) {
                             inviteMap.putIfAbsent(invite.getCode(), invite.getUses());
                         }
                     }
