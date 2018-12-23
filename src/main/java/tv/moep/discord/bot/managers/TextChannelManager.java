@@ -20,14 +20,37 @@ package tv.moep.discord.bot.managers;
 
 import com.typesafe.config.Config;
 import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.server.Server;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.commands.DiscordSender;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+
 public class TextChannelManager {
+    private final MoepsBot moepsBot;
     private final Config config;
 
     public TextChannelManager(MoepsBot moepsBot) {
+        this.moepsBot = moepsBot;
         config = moepsBot.getConfig("text-channel");
+
+        for (Server server : moepsBot.getDiscordApi().getServers()) {
+            if (config.hasPath(server.getIdAsString())) {
+                boolean scanServerMessages = config.hasPath(server.getId() + ".deleteMessages")
+                        || config.hasPath(server.getId() + ".deleteUserMessagess");
+                for (ServerTextChannel channel : server.getTextChannels()) {
+                    if (scanServerMessages
+                            || config.hasPath(server.getId() + "." + channel.getId() + ".deleteMessages")
+                            || config.hasPath(server.getId() + "." + channel.getId() + ".deleteUserMessages")) {
+                        channel.getMessages(100).thenAccept(ms -> ms.forEach(m -> checkForDeletion(channel, m)));
+                    }
+                }
+            }
+        }
 
         moepsBot.getDiscordApi().addMessageCreateListener(event -> {
             if (!event.getServerTextChannel().isPresent()) {
@@ -37,7 +60,42 @@ public class TextChannelManager {
             if (has(event.getServerTextChannel().get(), "commands") && event.getMessageContent().startsWith("!")) {
                 moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), event.getReadableMessageContent().substring(1));
             }
+
+            checkForDeletion(event.getServerTextChannel().get(), event.getMessage());
         });
+    }
+
+    private void checkForDeletion(ServerTextChannel channel, Message message) {
+        int deleteDuration;
+        if (hasPath(channel, "deleteUserMessages." + message.getAuthor().getId())) {
+            deleteDuration = getInt(channel, "deleteUserMessages." + message.getAuthor().getId());
+        } else {
+            deleteDuration = getInt(channel, "deleteMessages");
+        }
+        if (deleteDuration >= 0) {
+            long adjustedDeleteDuration = Math.max(0, deleteDuration - ChronoUnit.MINUTES.between(message.getLastEditTimestamp().orElse(message.getCreationTimestamp()), Instant.now()));
+            MoepsBot.log(Level.FINE, "Auto deleting message " + message.getId() + " from " + getChannelPath(channel) + " by " + message.getAuthor().getDiscriminatedName() + " in " + adjustedDeleteDuration + " Minutes!");
+
+            Runnable run = () -> {
+                message.delete("Auto deleted after " + adjustedDeleteDuration + " Minutes");
+                MoepsBot.log(Level.FINE, "Auto deleted message " + message.getId() + " from " + getChannelPath(channel) + " by " + message.getAuthor().getDiscriminatedName());
+            };
+
+            if (adjustedDeleteDuration > 0) {
+                this.moepsBot.getScheduler().schedule(run, adjustedDeleteDuration, TimeUnit.MINUTES);
+            } else {
+                run.run();
+            }
+        }
+    }
+
+    private String getChannelPath(ServerTextChannel channel) {
+        return channel.getServer().getName() + "/" + channel.getServer().getId() + " " + channel.getName() + "/" + channel.getId();
+    }
+
+    public boolean hasPath(ServerTextChannel channel, String path) {
+        return config.hasPath(channel.getServer().getId() + "." + channel.getId() + "." + path)
+                || config.hasPath(channel.getServer().getId() + "." + path);
     }
 
     public boolean has(ServerTextChannel channel, String option) {
@@ -48,5 +106,15 @@ public class TextChannelManager {
             return config.getBoolean(channel.getServer().getId() + "." + option);
         }
         return false;
+    }
+
+    public int getInt(ServerTextChannel channel, String path) {
+        if (config.hasPath(channel.getServer().getId() + "." + channel.getId() + "." + path)) {
+            return config.getInt(channel.getServer().getId() + "." + channel.getId() + "." + path);
+        }
+        if (config.hasPath(channel.getServer().getId() + "." + path)) {
+            return config.getInt(channel.getServer().getId() + "." + path);
+        }
+        return -1;
     }
 }
