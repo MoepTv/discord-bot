@@ -24,11 +24,11 @@ import lombok.Getter;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.entity.permission.Permissions;
 import org.javacord.api.entity.permission.PermissionsBuilder;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
 import tv.moep.discord.bot.commands.ListCommand;
+import tv.moep.discord.bot.managers.InviteManager;
 import tv.moep.discord.bot.managers.JoinLeaveManager;
 import tv.moep.discord.bot.managers.MessageManager;
 import tv.moep.discord.bot.managers.PrivateConversationManager;
@@ -49,6 +49,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
 
@@ -63,6 +65,8 @@ public class MoepsBot {
 
     private Map<String, Command> commands = new HashMap<>();
 
+    private ScheduledExecutorService scheduler;
+
     private DiscordApi discordApi;
 
     private StreamingManager streamingManager;
@@ -72,6 +76,7 @@ public class MoepsBot {
     private TextChannelManager textChannelManager;
     private MessageManager messageManager;
     private RoleManager roleManager;
+    private InviteManager inviteManager;
 
     public static void main(String[] args) {
         try {
@@ -137,9 +142,15 @@ public class MoepsBot {
         if (discordApi != null) {
             discordApi.disconnect();
         }
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
         config = getConfig("bot");
         try {
             discordApi = new DiscordApiBuilder().setToken(getConfig().getString("discord.token")).login().join();
+
+            scheduler = Executors.newScheduledThreadPool(1);;
+
             voiceChannelManager = new VoiceChannelManager(this);
             streamingManager = new StreamingManager(this);
             privateConversationManager = new PrivateConversationManager(this);
@@ -147,6 +158,7 @@ public class MoepsBot {
             textChannelManager = new TextChannelManager(this);
             messageManager = new MessageManager(this);
             roleManager = new RoleManager(this);
+            inviteManager = new InviteManager(this);
             log(Level.INFO, "You can invite the bot by using the following url: "
                     + discordApi.createBotInvite(
                             new PermissionsBuilder()
@@ -223,5 +235,9 @@ public class MoepsBot {
             sender.sendMessage("Usage: " + command.getName() + " " + command.getUsage());
         }
         return true;
+    }
+
+    public ScheduledExecutorService getScheduler() {
+        return scheduler;
     }
 }
