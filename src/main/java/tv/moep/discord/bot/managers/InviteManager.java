@@ -111,20 +111,22 @@ public class InviteManager {
             server.getRoleById(inviteRole).ifPresent(user::addRole);
         }
 
-        List<Role> availableRoles = dynamicRoles.get(server.getId()).stream()
-                .map(id -> server.getRoleById(id).orElse(null))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-        Role addRole = null;
-        for (Role role : invite.getInviter().getRoles(server)) {
-            for (Role availableRole : availableRoles) {
-                if (role.getPosition() <= availableRole.getPosition()  && (addRole == null || availableRole.getPosition() < addRole.getPosition())) {
-                    addRole = availableRole;
+        if (inviteRoles.isEmpty()) {
+            List<Role> availableRoles = dynamicRoles.get(server.getId()).stream()
+                    .map(id -> server.getRoleById(id).orElse(null))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            Role addRole = null;
+            for (Role role : invite.getInviter().getRoles(server)) {
+                for (Role availableRole : availableRoles) {
+                    if (role.getPosition() <= availableRole.getPosition() && (addRole == null || availableRole.getPosition() < addRole.getPosition())) {
+                        addRole = availableRole;
+                    }
                 }
             }
-        }
-        if (addRole != null) {
-            user.addRole(addRole);
+            if (addRole != null) {
+                user.addRole(addRole);
+            }
         }
     }
 }
