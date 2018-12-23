@@ -125,7 +125,7 @@ public class InviteManager {
             Role addRole = null;
             for (Role role : invite.getInviter().getRoles(server)) {
                 for (Role availableRole : availableRoles) {
-                    if (role.getPosition() <= availableRole.getPosition() && (addRole == null || availableRole.getPosition() < addRole.getPosition())) {
+                    if (availableRole.getPosition() <= role.getPosition() && (addRole == null || addRole.getPosition() < availableRole.getPosition())) {
                         addRole = availableRole;
                     }
                 }
