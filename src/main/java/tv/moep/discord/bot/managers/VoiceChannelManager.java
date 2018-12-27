@@ -65,7 +65,7 @@ public class VoiceChannelManager {
      */
     private Optional<ServerVoiceChannel> checkForMove(User user, Activity activity, ServerVoiceChannel voiceChannel) {
         String channelPath = voiceChannel.getServer().getIdAsString() + "." + voiceChannel.getIdAsString();
-        String path = channelPath + ".games." + activity.getName();
+        String path = channelPath + ".games.\"" + activity.getName() + "\"";
         if (config.hasPath(path)) {
             if (config.hasPath(channelPath + ".ignoreRoles")) {
                 List<String> ignoredRoles = config.getStringList(channelPath + ".ignoreRoles");
