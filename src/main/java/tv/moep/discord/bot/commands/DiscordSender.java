@@ -25,8 +25,8 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Permission;
+import tv.moep.discord.bot.Utils;
 
-import java.awt.Color;
 import java.util.concurrent.CompletableFuture;
 
 public class DiscordSender implements CommandSender {
@@ -48,7 +48,7 @@ public class DiscordSender implements CommandSender {
         CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(new EmbedBuilder()
                 .setTitle(message)
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
-                .setColor(new Color((int)(Math.random() * 0x1000000)))
+                .setColor(Utils.getRandomColor())
         );
         if (!(this.message.getChannel() instanceof ServerTextChannel)
                 || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
@@ -63,7 +63,7 @@ public class DiscordSender implements CommandSender {
                 .setTitle(title)
                 .setDescription(message)
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
-                .setColor(new Color((int)(Math.random() * 0x1000000)))
+                .setColor(Utils.getRandomColor())
         );
         if (!(this.message.getChannel() instanceof ServerTextChannel)
                 || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {

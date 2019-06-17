@@ -27,6 +27,7 @@ import lombok.Data;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.util.NonThrowingAutoCloseable;
 import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.util.ArrayList;
@@ -103,7 +104,7 @@ public class PrivateConversationManager {
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        event.getPrivateChannel().get().sendMessage(MoepsBot.replacePlaceholders(response));
+                        event.getPrivateChannel().get().sendMessage(Utils.replacePlaceholders(response));
                         MoepsBot.log(Level.FINE, sender + " | Message sent!");
                     }).start();
                 } else {

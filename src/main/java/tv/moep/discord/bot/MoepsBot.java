@@ -48,6 +48,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -60,6 +61,7 @@ public class MoepsBot {
 
     public static String VERSION = "Unknown Version";
     public static String NAME = MoepsBot.class.getSimpleName();
+    public static Random RANDOM = new Random();
 
     private Config config = ConfigFactory.load();
 
@@ -125,17 +127,6 @@ public class MoepsBot {
             } catch (InterruptedException ignored) { }
         }
         log(Level.INFO, "Bye!");
-    }
-
-    public static String replacePlaceholders(String response) {
-        return replace(response, "version", VERSION, "name", NAME);
-    }
-
-    public static String replace(String string, String... replacements) {
-        for (int i = 0; i+1 < replacements.length; i+=2) {
-            string = string.replace("%" + replacements[i] + "%", replacements[i+1]);
-        }
-        return string;
     }
 
     private void loadConfig() {

@@ -23,6 +23,7 @@ import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,4 +44,18 @@ public class Utils {
         return list;
     }
 
+    public static Color getRandomColor() {
+        return new Color((int) (MoepsBot.RANDOM.nextDouble() * 0x1000000));
+    }
+
+    public static String replacePlaceholders(String response) {
+        return replace(response, "version", MoepsBot.VERSION, "name", MoepsBot.NAME);
+    }
+
+    public static String replace(String string, String... replacements) {
+        for (int i = 0; i+1 < replacements.length; i+=2) {
+            string = string.replace("%" + replacements[i] + "%", replacements[i+1]);
+        }
+        return string;
+    }
 }
