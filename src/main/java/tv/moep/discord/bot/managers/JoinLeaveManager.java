@@ -57,13 +57,13 @@ public class JoinLeaveManager {
                     return channels.isEmpty() ? null : channels.get(0);
                 });
                 if (channel != null) {
-                    if (config.hasPath(event.getServer().getId() + ".message")) {
+                    if (config.hasPath(event.getServer().getId() + ".leaves.message")) {
                         List<String> messages = config.getStringList(event.getServer().getId() + ".leaves.message");
                         if (messages.isEmpty() && config.hasPath(event.getServer().getId() + ".leaves.message")) {
                             messages.add(config.getString(event.getServer().getId() + ".leaves.message"));
                         }
                         if (!messages.isEmpty()) {
-                            sendMessage(channel, Utils.replace(
+                            channel.sendMessage(Utils.replace(
                                     messages.get(MoepsBot.RANDOM.nextInt(messages.size())),
                                     "username", event.getUser().getDiscriminatedName(),
                                     "usermention", event.getUser().getNicknameMentionTag(),
@@ -72,18 +72,11 @@ public class JoinLeaveManager {
                             ));
                         }
                     } else {
-                        sendMessage(channel, "*" + event.getUser().getMentionTag() + " left*");
+                        channel.sendMessage("*" + event.getUser().getMentionTag() + " left*");
                     }
                 }
             }
         });
-    }
-
-    private void sendMessage(ServerTextChannel channel, String message) {
-        channel.sendMessage(new EmbedBuilder()
-                .setDescription(message)
-                .setColor(Utils.getRandomColor())
-        );
     }
 
     public Collection<Map.Entry<String, Long>> getJoins(Server server) {
