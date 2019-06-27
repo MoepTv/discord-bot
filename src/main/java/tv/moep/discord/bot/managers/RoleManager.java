@@ -127,7 +127,7 @@ public class RoleManager extends Manager {
                 user.addRole(role);
             }
         }
-        for (String roleId : serverConfig.getConfig(server.getIdAsString()).root().keySet()) {
+        for (String roleId : serverConfig.root().keySet()) {
             Optional<Role> role = server.getRoleById(roleId);
             if (role.isPresent()) {
                 Config roleConfig = serverConfig.getConfig(roleId).withFallback(defaultRoleConfig);
