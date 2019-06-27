@@ -127,6 +127,7 @@ public class MoepsBot {
             } catch (InterruptedException ignored) { }
         }
         log(Level.INFO, "Bye!");
+        System.exit(0);
     }
 
     private void loadConfig() {
