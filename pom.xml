@@ -6,7 +6,7 @@
 
     <groupId>tv.moep.discord</groupId>
     <artifactId>bot</artifactId>
-    <version>1.4-SNAPSHOT</version>
+    <version>1.4.1-SNAPSHOT</version>
     <name>MoepsBot</name>
 
     <description>Bot for the Moep.tv discord guild</description>
@@ -18,6 +18,13 @@
         <build.number>${buildNumber}</build.number>
         <application.version>${project.version} ${buildDescription}</application.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>jcenter-snapshot</id>
+            <url>https://oss.jfrog.org/artifactory/libs-release/</url>
+        </repository>
+    </repositories>
 
     <dependencies>
         <dependency>
@@ -41,6 +48,11 @@
             <groupId>com.typesafe</groupId>
             <artifactId>config</artifactId>
             <version>1.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.twitch4j</groupId>
+            <artifactId>twitch4j</artifactId>
+            <version>1.0.0-alpha.13</version>
         </dependency>
     </dependencies>
 

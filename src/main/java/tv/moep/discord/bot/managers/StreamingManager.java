@@ -18,7 +18,13 @@ package tv.moep.discord.bot.managers;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import com.github.twitch4j.TwitchClient;
+import com.github.twitch4j.TwitchClientBuilder;
+import com.github.twitch4j.common.events.channel.ChannelGoLiveEvent;
+import com.github.twitch4j.common.events.channel.ChannelGoOfflineEvent;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigValue;
+import com.typesafe.config.ConfigValueType;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
@@ -27,17 +33,57 @@ import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
 
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 
 public class StreamingManager extends Manager {
 
+    private final boolean markChannel;
     private final String markerPrefix;
     private final String markerSuffix;
+    private TwitchClient twitchClient = null;
+
+    private Map<String, String> listeners = new HashMap<>();
 
     public StreamingManager(MoepsBot moepsBot) {
         super(moepsBot, "streaming");
-        boolean markChannel = getConfig().getBoolean("streaming-marker.enabled");
+
+        if (getConfig().hasPath("listener")) {
+            Config config = getConfig().getConfig("listener");
+            if (!config.isEmpty()) {
+                twitchClient = TwitchClientBuilder.builder().withEnableHelix(true).build();
+                for (Map.Entry<String, ConfigValue> entry : config.root().entrySet()) {
+                    if (entry.getValue().valueType() == ConfigValueType.STRING) {
+                        String twitchName = (String) entry.getValue().unwrapped();
+                        listeners.put(twitchName.toLowerCase(), entry.getKey());
+                        twitchClient.getClientHelper().enableStreamEventListener(twitchName);
+                    }
+                }
+
+                if (listeners.size() > 0) {
+                    twitchClient.getEventManager().onEvent(ChannelGoLiveEvent.class).subscribe(event -> {
+                        if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
+                            String discordId = listeners.get(event.getChannel().getName().toLowerCase());
+                            User user = getMoepsBot().getUser(discordId);
+                            if (!user.getActivity().isPresent() || user.getActivity().get().getType() != ActivityType.STREAMING) {
+                                onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), event.getTitle());
+                            }
+                        }
+                    });
+                    twitchClient.getEventManager().onEvent(ChannelGoOfflineEvent.class).subscribe(event -> {
+                        if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
+                            String discordId = listeners.get(event.getChannel().getName().toLowerCase());
+                            User user = getMoepsBot().getUser(discordId);
+                            onOffline(user, discordId, "https://twitch.tv/" + event.getChannel().getName());
+                        }
+                    });
+                }
+            }
+        }
+
+
+        markChannel = getConfig().getBoolean("streaming-marker.enabled");
         markerPrefix = getConfig().getString("streaming-marker.prefix");
         markerSuffix = getConfig().getString("streaming-marker.suffix");
 
@@ -60,89 +106,95 @@ public class StreamingManager extends Manager {
         });
 
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
-            User user = event.getUser();
             if (event.getNewActivity().isPresent() && event.getNewActivity().get().getType() == ActivityType.STREAMING) {
-                Optional<String> streamingUrl = event.getNewActivity().get().getStreamingUrl();
-                if (!user.isBot()) {
-                    log(Level.FINE, user.getDiscriminatedName() + " started streaming " + event.getNewActivity().get().getName() + " at " + streamingUrl.orElse("somewhere?"));
-                }
-
-                if (streamingUrl.isPresent()) {
-                    for (Server server : user.getMutualServers()) {
-                        Config serverConfig = getConfig(server);
-                        if (serverConfig != null && serverConfig.hasPath("announce.channel")) {
-                            ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
-                            if (channel == null) {
-                                log(Level.WARNING, "Could not find channel ");
-                                continue;
-                            }
-
-                            if (serverConfig.hasPath("announce.roles") && !Utils.hasRole(user, server, serverConfig.getStringList("announce.roles"))) {
-                                continue;
-                            }
-
-                            String message = serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%";
-                            channel.sendMessage(Utils.replace(
-                                    message,
-                                    "username", event.getUser().getDisplayName(server),
-                                    "game", event.getNewActivity().get().getName(),
-                                    "url", streamingUrl.get()
-                            ));
-                        }
-                    }
-                }
-
-                if (markChannel && (!event.getOldActivity().isPresent() || event.getOldActivity().get().getType() != ActivityType.STREAMING)) {
-                    for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
-                        markChannelName(voiceChannel);
-                    }
-                }
+                onLive(event.getUser(), event.getUser().getName(), event.getNewActivity().get().getStreamingUrl().orElse(null), event.getNewActivity().get().getName() + " " + event.getNewActivity().get().getDetails().orElse(""));
             }
             if (event.getOldActivity().isPresent() && event.getOldActivity().get().getType() == ActivityType.STREAMING) {
-                user.getConnectedVoiceChannels().forEach(this::checkForMarkRemoval);
-
-                Optional<String> streamingUrl = event.getOldActivity().get().getStreamingUrl();
-                if (!user.isBot()) {
-                    log(Level.FINE, user.getDiscriminatedName() + " stopped streaming " + user.getActivity().get().getName() + " at " + streamingUrl.orElse("somewhere?"));
-                }
-
-                if (streamingUrl.isPresent()) {
-                    for (Server server : user.getMutualServers()) {
-                        Config serverConfig = getConfig(server);
-                        if (serverConfig != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
-                            ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
-                            if (channel == null) {
-                                log(Level.WARNING, "Could not find channel ");
-                                continue;
-                            }
-
-                            String message = Utils.replace(
-                                    serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%",
-                                    "username", event.getUser().getDisplayName(server),
-                                    "game", event.getOldActivity().get().getName(),
-                                    "url", streamingUrl.get()
-                            );
-                            String newMessage = Utils.replace(
-                                    serverConfig.getString("announce.offline"),
-                                    "username", event.getUser().getDisplayName(server),
-                                    "game", event.getOldActivity().get().getName(),
-                                    "url", streamingUrl.get()
-                            );
-
-                            channel.getMessages(100).thenAccept(ms -> ms.forEach(m -> {
-                                if (m.getAuthor().isYourself() && (m.getContent().equalsIgnoreCase(message) || m.getContent().contains(streamingUrl.get()))) {
-                                    if (newMessage.equalsIgnoreCase("delete")) {
-                                        m.delete("Stream is now offline");
-                                    } else {
-                                        m.edit(newMessage);
-                                    }
-                                }
-                            }));
-                        }
-                    }
-                }
+                onOffline(event.getUser(), event.getUser().getName(), event.getOldActivity().get().getStreamingUrl().orElse(null));
             }
         });
+    }
+
+    private void onLive(User user, String rawName, String streamingUrl, String title) {
+        if (user != null) {
+            if (!user.isBot()) {
+                log(Level.FINE, user.getDiscriminatedName() + " started streaming " + title + " at " + streamingUrl);
+            }
+        }else {
+            log(Level.FINE, rawName + " stopped streaming at " + streamingUrl);
+        }
+
+        if (streamingUrl != null) {
+            for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
+                Config serverConfig = getConfig(server);
+                if (serverConfig != null && serverConfig.hasPath("announce.channel")) {
+                    ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
+                    if (channel == null) {
+                        log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel"));
+                        continue;
+                    }
+
+                    if (user != null && serverConfig.hasPath("announce.roles") && !Utils.hasRole(user, server, serverConfig.getStringList("announce.roles"))) {
+                        continue;
+                    }
+
+                    String message = serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%";
+                    channel.sendMessage(Utils.replace(
+                            message,
+                            "username", user != null ? user.getDisplayName(server) : rawName,
+                            "title", title,
+                            "url", streamingUrl
+                    ));
+                }
+            }
+        }
+
+        if (markChannel && user != null) {
+            for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
+                markChannelName(voiceChannel);
+            }
+        }
+    }
+
+    private void onOffline(User user, String rawName, String streamingUrl) {
+        if (user != null) {
+            user.getConnectedVoiceChannels().forEach(this::checkForMarkRemoval);
+
+            if (!user.isBot()) {
+                log(Level.FINE, user.getDiscriminatedName() + " stopped streaming at " + streamingUrl);
+            }
+        } else {
+            log(Level.FINE, rawName + " stopped streaming at " + streamingUrl);
+        }
+
+        if (streamingUrl != null) {
+            for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
+                Config serverConfig = getConfig(server);
+                if (serverConfig != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
+                    ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
+                    if (channel == null) {
+                        log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel"));
+                        continue;
+                    }
+
+                    String newMessage = Utils.replace(
+                            serverConfig.getString("announce.offline"),
+                            "username", user != null ? user.getDisplayName(server) : rawName,
+                            "url", streamingUrl
+                    );
+
+                    channel.getMessages(100).thenAccept(ms -> ms.forEach(m -> {
+                        if (m.getAuthor().isYourself() && m.getContent().contains(streamingUrl)) {
+                            if (newMessage.equalsIgnoreCase("delete")) {
+                                m.delete("Stream is now offline");
+                            } else {
+                                m.edit(newMessage);
+                            }
+                        }
+                    }));
+                }
+            }
+        }
     }
 
     private void checkForMarkRemoval(ServerVoiceChannel voiceChannel) {

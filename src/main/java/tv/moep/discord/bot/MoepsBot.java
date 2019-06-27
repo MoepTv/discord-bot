@@ -25,6 +25,7 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.PermissionsBuilder;
+import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
@@ -48,6 +49,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CompletionException;
@@ -147,7 +149,7 @@ public class MoepsBot {
         try {
             discordApi = new DiscordApiBuilder().setToken(getConfig().getString("discord.token")).login().join();
 
-            scheduler = Executors.newScheduledThreadPool(1);;
+            scheduler = Executors.newScheduledThreadPool(1);
 
             voiceChannelManager = new VoiceChannelManager(this);
             streamingManager = new StreamingManager(this);
@@ -237,5 +239,20 @@ public class MoepsBot {
 
     public ScheduledExecutorService getScheduler() {
         return scheduler;
+    }
+
+    public User getUser(String discordId) {
+        if (discordId != null && discordId.contains("#")) {
+            return getDiscordApi().getCachedUserByDiscriminatedName(discordId).orElseGet(() -> {
+                for (Server server : getDiscordApi().getServers()) {
+                    Optional<User> member = server.getMemberByDiscriminatedName(discordId);
+                    if (member.isPresent()) {
+                        return member.get();
+                    }
+                }
+                return null;
+            });
+        }
+        return null;
     }
 }
