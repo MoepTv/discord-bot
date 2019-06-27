@@ -25,6 +25,7 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.PermissionsBuilder;
+import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
 import tv.moep.discord.bot.commands.ListCommand;
@@ -50,6 +51,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiFunction;
@@ -110,12 +112,16 @@ public class MoepsBot {
         });
         registerCommand("stop", Permission.OPERATOR, (sender, args) -> {
             sender.sendMessage("Stopping " + NAME + " v" + VERSION);
+            try {
+                getDiscordApi().getOwner().get().sendMessage("Shutdown triggered by " + sender.getName() + " (" + NAME + " v" + VERSION + ")").get();
+            } catch (InterruptedException | ExecutionException ignored) {}
             synchronized (MoepsBot.this) {
                 this.notifyAll();
             }
             return true;
         });
         registerCommand(new ListCommand(this));
+        getDiscordApi().getOwner().thenAccept(owner -> owner.sendMessage("Started " + NAME + " v" + VERSION));
         synchronized (MoepsBot.this) {
             try {
                 wait();
