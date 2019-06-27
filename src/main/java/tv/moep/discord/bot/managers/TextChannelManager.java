@@ -30,22 +30,20 @@ import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-public class TextChannelManager {
-    private final MoepsBot moepsBot;
-    private final Config config;
+public class TextChannelManager extends Manager {
 
     public TextChannelManager(MoepsBot moepsBot) {
-        this.moepsBot = moepsBot;
-        config = moepsBot.getConfig("text-channel");
+        super(moepsBot, "text-channel");
 
         for (Server server : moepsBot.getDiscordApi().getServers()) {
-            if (config.hasPath(server.getIdAsString())) {
-                boolean scanServerMessages = config.hasPath(server.getId() + ".deleteMessages")
-                        || config.hasPath(server.getId() + ".deleteUserMessagess");
+            Config serverConfig = getConfig(server);
+            if (serverConfig != null) {
+                boolean scanServerMessages = serverConfig.hasPath("deleteMessages")
+                        || serverConfig.hasPath("deleteUserMessagess");
                 for (ServerTextChannel channel : server.getTextChannels()) {
                     if (scanServerMessages
-                            || config.hasPath(server.getId() + "." + channel.getId() + ".deleteMessages")
-                            || config.hasPath(server.getId() + "." + channel.getId() + ".deleteUserMessages")) {
+                            || serverConfig.hasPath(channel.getId() + ".deleteMessages")
+                            || serverConfig.hasPath(channel.getId() + ".deleteUserMessages")) {
                         channel.getMessages(100).thenAccept(ms -> ms.forEach(m -> checkForDeletion(channel, m)));
                     }
                 }
@@ -82,7 +80,7 @@ public class TextChannelManager {
             };
 
             if (adjustedDeleteDuration > 0) {
-                this.moepsBot.getScheduler().schedule(run, adjustedDeleteDuration, TimeUnit.MINUTES);
+                getMoepsBot().getScheduler().schedule(run, adjustedDeleteDuration, TimeUnit.MINUTES);
             } else {
                 run.run();
             }
@@ -91,30 +89,5 @@ public class TextChannelManager {
 
     private String getChannelPath(ServerTextChannel channel) {
         return channel.getServer().getName() + "/" + channel.getServer().getId() + " " + channel.getName() + "/" + channel.getId();
-    }
-
-    public boolean hasPath(ServerTextChannel channel, String path) {
-        return config.hasPath(channel.getServer().getId() + "." + channel.getId() + "." + path)
-                || config.hasPath(channel.getServer().getId() + "." + path);
-    }
-
-    public boolean has(ServerTextChannel channel, String option) {
-        if (config.hasPath(channel.getServer().getId() + "." + channel.getId() + "." + option)) {
-            return config.getBoolean(channel.getServer().getId() + "." + channel.getId() + "." + option);
-        }
-        if (config.hasPath(channel.getServer().getId() + "." + option)) {
-            return config.getBoolean(channel.getServer().getId() + "." + option);
-        }
-        return false;
-    }
-
-    public int getInt(ServerTextChannel channel, String path) {
-        if (config.hasPath(channel.getServer().getId() + "." + channel.getId() + "." + path)) {
-            return config.getInt(channel.getServer().getId() + "." + channel.getId() + "." + path);
-        }
-        if (config.hasPath(channel.getServer().getId() + "." + path)) {
-            return config.getInt(channel.getServer().getId() + "." + path);
-        }
-        return -1;
     }
 }

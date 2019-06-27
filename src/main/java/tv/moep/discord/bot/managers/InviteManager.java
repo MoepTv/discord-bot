@@ -38,19 +38,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-public class InviteManager {
-    private final Config config;
+public class InviteManager extends Manager {
     private Map<Long, Map<String, Integer>> inviteCounts = new ConcurrentHashMap<>();
     private Multimap<Long, String> dynamicRoles = MultimapBuilder.hashKeys().hashSetValues().build();
-    private MoepsBot moepsBot;
 
     public InviteManager(MoepsBot moepsBot) {
-        this.moepsBot = moepsBot;
-        config = moepsBot.getConfig("invites");
+        super(moepsBot, "invites");
 
         for (Server server : moepsBot.getDiscordApi().getServers()) {
-            if (config.hasPath(server.getIdAsString())) {
-                dynamicRoles.putAll(server.getId(), Utils.getList(config, server.getId() + ".dynamicRoles"));
+            Config serverConfig = getConfig(server);
+            if (serverConfig != null) {
+                dynamicRoles.putAll(server.getId(), Utils.getList(serverConfig, "dynamicRoles"));
             }
         }
 
@@ -93,8 +91,8 @@ public class InviteManager {
     }
 
     private void checkForNewInvites() {
-        for (Server server : moepsBot.getDiscordApi().getServers()) {
-            if (config.hasPath(server.getIdAsString())) {
+        for (Server server : getMoepsBot().getDiscordApi().getServers()) {
+            if (getConfig(server) != null) {
                 Map<String, Integer> inviteMap = inviteCounts.computeIfAbsent(server.getId(), id -> new ConcurrentHashMap<>());
                 try {
                     for (RichInvite invite : server.getInvites().get()) {
@@ -112,7 +110,7 @@ public class InviteManager {
     private void handleInvite(User user, RichInvite invite, Server server) {
         MoepsBot.log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + invite.getInviter().getDiscriminatedName());
 
-        List<String> inviteRoles = Utils.getList(config, server.getId() + ".inviteRoles." + invite.getCode());
+        List<String> inviteRoles = Utils.getList(getConfig(), server.getId() + ".inviteRoles." + invite.getCode());
         for (String inviteRole : inviteRoles) {
             server.getRoleById(inviteRole).ifPresent(user::addRole);
         }

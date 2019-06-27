@@ -35,9 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class RoleManager {
+public class RoleManager extends Manager {
     public static final String REGEX_PREFIX = "r=";
-    private final Config config;
     private final Config defaultRoleConfig = ConfigFactory.parseMap(ImmutableMap.of(
             "playing", new ArrayList<String>(),
             "streaming", new ArrayList<String>(),
@@ -47,10 +46,10 @@ public class RoleManager {
     ));
 
     public RoleManager(MoepsBot moepsBot) {
-        config = moepsBot.getConfig("roles");
+        super(moepsBot, "roles");
 
         for (Server server : moepsBot.getDiscordApi().getServers()) {
-            if (config.hasPath(server.getIdAsString())) {
+            if (getConfig(server) != null) {
                 for (User user : server.getMembers()) {
                     updateRoles(user, user.getActivity().orElse(null), server);
                 }
@@ -83,7 +82,7 @@ public class RoleManager {
     private boolean updateRoles(User user, Activity activity) {
         boolean r = false;
         for (Server server : user.getMutualServers()) {
-            if (config.hasPath(server.getIdAsString())) {
+            if (getConfig(server) != null) {
                 r |= updateRoles(user, activity, server);
             }
         }
@@ -93,7 +92,7 @@ public class RoleManager {
     private boolean updateRoles(User user, ActivityType type, String name) {
         boolean r = false;
         for (Server server : user.getMutualServers()) {
-            if (config.hasPath(server.getIdAsString())) {
+            if (getConfig(server) != null) {
                 r |= updateRoles(user, type, name, server);
             }
         }
@@ -117,20 +116,21 @@ public class RoleManager {
             return updateRoles(user, type, name);
         }
 
-        if (!config.hasPath(server.getIdAsString())) {
+        Config serverConfig = getConfig(server);
+        if (serverConfig == null) {
             return false;
         }
         boolean r = false;
-        if (type != null && config.hasPath(server.getId() + ".dynamicPrefix." + type.name().toLowerCase())) {
-            for (Role role : server.getRolesByNameIgnoreCase(config.getString(server.getId() + ".dynamicPrefix." + type.name().toLowerCase()) + name)) {
+        if (type != null && serverConfig.hasPath("dynamicPrefix." + type.name().toLowerCase())) {
+            for (Role role : server.getRolesByNameIgnoreCase(serverConfig.getString("dynamicPrefix." + type.name().toLowerCase()) + name)) {
                 r = true;
                 user.addRole(role);
             }
         }
-        for (String roleId : config.getConfig(server.getIdAsString()).root().keySet()) {
+        for (String roleId : serverConfig.getConfig(server.getIdAsString()).root().keySet()) {
             Optional<Role> role = server.getRoleById(roleId);
             if (role.isPresent()) {
-                Config roleConfig = config.getConfig(server.getIdAsString() + "." + roleId).withFallback(defaultRoleConfig);
+                Config roleConfig = serverConfig.getConfig(roleId).withFallback(defaultRoleConfig);
                 boolean matches = false;
                 if (type != null) {
                     List<String> matching = Utils.getList(roleConfig, type.name().toLowerCase());

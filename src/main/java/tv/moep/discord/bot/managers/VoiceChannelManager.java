@@ -32,12 +32,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 
-public class VoiceChannelManager {
-
-    private final Config config;
+public class VoiceChannelManager extends Manager {
 
     public VoiceChannelManager(MoepsBot moepsBot) {
-        config = moepsBot.getConfig("voice-channel");
+        super(moepsBot, "voice-channel");
 
         moepsBot.getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
             User user = event.getUser();
@@ -64,11 +62,11 @@ public class VoiceChannelManager {
      * @return The channel the user might have moved to, an empty optional if he wasn't used for any reason
      */
     private Optional<ServerVoiceChannel> checkForMove(User user, Activity activity, ServerVoiceChannel voiceChannel) {
-        String channelPath = voiceChannel.getServer().getIdAsString() + "." + voiceChannel.getIdAsString();
-        String path = channelPath + ".games.\"" + activity.getName() + "\"";
-        if (config.hasPath(path)) {
-            if (config.hasPath(channelPath + ".ignoreRoles")) {
-                List<String> ignoredRoles = config.getStringList(channelPath + ".ignoreRoles");
+        Config channelConfig = getConfig(voiceChannel);
+        String path = "games.\"" + activity.getName() + "\"";
+        if (channelConfig != null && channelConfig.hasPath(path)) {
+            if (channelConfig.hasPath("ignoreRoles")) {
+                List<String> ignoredRoles = channelConfig.getStringList("ignoreRoles");
                 for (Role role : user.getRoles(voiceChannel.getServer())) {
                     if (ignoredRoles.contains(role.getName()) || ignoredRoles.contains(role.getIdAsString())) {
                         return Optional.empty();
@@ -76,7 +74,7 @@ public class VoiceChannelManager {
                 }
             }
 
-            ConfigValue value = config.getValue(path);
+            ConfigValue value = getConfig().getValue(path);
             ServerVoiceChannel targetChannel = null;
             if (value.valueType() == ConfigValueType.STRING) {
                 targetChannel = voiceChannel.getServer().getVoiceChannelById((String) value.unwrapped()).orElse(null);
@@ -85,7 +83,7 @@ public class VoiceChannelManager {
                 targetChannel = voiceChannel.getServer().getVoiceChannelById((long) value.unwrapped()).orElse(null);
             }
             if (targetChannel == null) {
-                List<ServerVoiceChannel> matchingChannels = voiceChannel.getServer().getVoiceChannelsByName(config.getString(path));
+                List<ServerVoiceChannel> matchingChannels = voiceChannel.getServer().getVoiceChannelsByName(channelConfig.getString(path));
                 if (!matchingChannels.isEmpty()) {
                     targetChannel = matchingChannels.get(0);
                 }

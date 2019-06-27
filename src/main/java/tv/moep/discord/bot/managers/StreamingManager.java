@@ -18,7 +18,6 @@ package tv.moep.discord.bot.managers;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import com.typesafe.config.Config;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.user.User;
@@ -26,18 +25,16 @@ import tv.moep.discord.bot.MoepsBot;
 
 import java.util.logging.Level;
 
-public class StreamingManager {
+public class StreamingManager extends Manager {
 
-    private final Config config;
     private final String markerPrefix;
     private final String markerSuffix;
 
     public StreamingManager(MoepsBot moepsBot) {
-        config = moepsBot.getConfig("streaming");
-
-        boolean markChannel = config.getBoolean("streaming-marker.enabled");
-        markerPrefix = config.getString("streaming-marker.prefix");
-        markerSuffix = config.getString("streaming-marker.suffix");
+        super(moepsBot, "streaming");
+        boolean markChannel = getConfig().getBoolean("streaming-marker.enabled");
+        markerPrefix = getConfig().getString("streaming-marker.prefix");
+        markerSuffix = getConfig().getString("streaming-marker.suffix");
 
         moepsBot.getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
             User user = event.getUser();

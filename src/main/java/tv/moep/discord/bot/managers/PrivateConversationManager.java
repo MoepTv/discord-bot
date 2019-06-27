@@ -42,22 +42,20 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-public class PrivateConversationManager {
+public class PrivateConversationManager extends Manager {
     private static Map<String, Set<Long>> once = new HashMap<>();
     private static final Random RANDOM = new Random();
 
     private final long lastMessageCooldown;
     private final Cache<Long, Long> lastMessage;
 
-    private final Config config;
-
     private final Map<String, Topic> topics = new LinkedHashMap<>();
 
     public PrivateConversationManager(MoepsBot moepsBot) {
-        config = moepsBot.getConfig("private-conversation");
-        lastMessage = CacheBuilder.newBuilder().maximumSize(config.getLong("lastMessage.cacheSize")).build();
-        lastMessageCooldown = config.getLong("lastMessage.cooldown");
-        if (config.hasPath("enabled") && !config.getBoolean("enabled")) {
+        super(moepsBot, "private-conversation");
+        lastMessage = CacheBuilder.newBuilder().maximumSize(getConfig().getLong("lastMessage.cacheSize")).build();
+        lastMessageCooldown = getConfig().getLong("lastMessage.cooldown");
+        if (getConfig().hasPath("enabled") && !getConfig().getBoolean("enabled")) {
             return;
         }
         Config defaultConfig = ConfigFactory.parseMap(ImmutableMap.of(
@@ -65,8 +63,8 @@ public class PrivateConversationManager {
                 "triggers", new ArrayList<String>(),
                 "responses", new ArrayList<String>()
         ));
-        for (String topic : config.getConfig("topics").root().keySet()) {
-            addTopic(new Topic(topic, config.getConfig("topics." + topic).withFallback(defaultConfig)));
+        for (String topic : getConfig().getConfig("topics").root().keySet()) {
+            addTopic(new Topic(topic, getConfig().getConfig("topics." + topic).withFallback(defaultConfig)));
         }
         moepsBot.getDiscordApi().addMessageCreateListener(event -> {
             if (!event.isPrivateMessage() || event.getMessageAuthor().getId() == moepsBot.getDiscordApi().getClientId()) {

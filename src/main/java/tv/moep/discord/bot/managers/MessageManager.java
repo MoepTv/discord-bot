@@ -27,8 +27,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class MessageManager {
+public class MessageManager extends Manager {
     public MessageManager(MoepsBot moepsBot) {
+        super(moepsBot, "messages");
         moepsBot.getDiscordApi().addReactionAddListener(event -> {
             if (event.getUser().isYourself()) {
                 return;
