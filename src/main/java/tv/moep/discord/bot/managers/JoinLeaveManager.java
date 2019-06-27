@@ -21,8 +21,12 @@ package tv.moep.discord.bot.managers;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 import com.typesafe.config.Config;
+import org.javacord.api.entity.auditlog.AuditLog;
+import org.javacord.api.entity.auditlog.AuditLogActionType;
+import org.javacord.api.entity.auditlog.AuditLogEntry;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.event.server.member.ServerMemberLeaveEvent;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
 
@@ -30,6 +34,7 @@ import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
 public class JoinLeaveManager extends Manager {
@@ -48,7 +53,7 @@ public class JoinLeaveManager extends Manager {
             MoepsBot.log(Level.INFO, event.getUser().getDiscriminatedName() + " left guild " + event.getServer().getName());
             leaves.put(event.getServer().getId(), new AbstractMap.SimpleEntry<>(event.getUser().getDiscriminatedName(), System.currentTimeMillis()));
             Config serverConfig = getConfig(event.getServer());
-            if (serverConfig != null && serverConfig.hasPath("leaves.channel")) {
+            if (serverConfig != null && serverConfig.hasPath("leaves.channel") && (!has(event.getServer(), "leaves.ignore-kicks") || !isKick(event))) {
                 String channelStr = serverConfig.getString("leaves.channel");
                 ServerTextChannel channel = event.getServer().getTextChannelById(channelStr).orElseGet(() -> {
                     List<ServerTextChannel> channels = event.getServer().getTextChannelsByNameIgnoreCase(channelStr);
@@ -75,6 +80,20 @@ public class JoinLeaveManager extends Manager {
                 }
             }
         });
+    }
+
+    private boolean isKick(ServerMemberLeaveEvent event) {
+        if (event.getServer().canYouViewAuditLog()) {
+            try {
+                AuditLog auditLog = event.getServer().getAuditLog(1, AuditLogActionType.MEMBER_KICK).get();
+                for (AuditLogEntry entry : auditLog.getEntries()) {
+                    if (entry.getTarget().isPresent() && entry.getTarget().get().asUser().get().equals(event.getUser())) {
+                        return true;
+                    }
+                }
+            } catch (InterruptedException | ExecutionException ignored) {}
+        }
+        return false;
     }
 
     public Collection<Map.Entry<String, Long>> getJoins(Server server) {

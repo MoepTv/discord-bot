@@ -50,6 +50,16 @@ public abstract class Manager {
         }
     }
 
+    public boolean has(Server server, String option) {
+        if (getConfig().hasPath(server.getIdAsString() + "." + option)) {
+            return getConfig().getBoolean(server.getIdAsString() + "." + option);
+        }
+        if (getConfig().hasPath(server.getIdAsString() + "." + option)) {
+            return getConfig().getBoolean(server.getIdAsString() + "." + option);
+        }
+        return false;
+    }
+
     public Config getConfig(ServerChannel channel) {
         try {
             return getConfig().getConfig(channel.getServer().getIdAsString() + "." + channel.getIdAsString());
