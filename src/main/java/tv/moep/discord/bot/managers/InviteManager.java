@@ -101,14 +101,14 @@ public class InviteManager extends Manager {
                         }
                     }
                 } catch (InterruptedException | ExecutionException e) {
-                    MoepsBot.log(Level.SEVERE, "Could not get invites for server " + server.getName() + "/" + server.getId() + "! " + e.getMessage());
+                    log(Level.SEVERE, "Could not get invites for server " + server.getName() + "/" + server.getId() + "! " + e.getMessage());
                 }
             }
         }
     }
 
     private void handleInvite(User user, RichInvite invite, Server server) {
-        MoepsBot.log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + invite.getInviter().getDiscriminatedName());
+        log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + invite.getInviter().getDiscriminatedName());
 
         List<String> inviteRoles = Utils.getList(getConfig(), server.getId() + ".inviteRoles." + invite.getCode());
         for (String inviteRole : inviteRoles) {

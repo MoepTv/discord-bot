@@ -46,19 +46,15 @@ public class JoinLeaveManager extends Manager {
         super(moepsBot, "join-leave");
 
         moepsBot.getDiscordApi().addServerMemberJoinListener(event -> {
-            MoepsBot.log(Level.INFO, event.getUser().getDiscriminatedName() + " joined guild " + event.getServer().getName());
+            log(Level.INFO, event.getUser().getDiscriminatedName() + " joined guild " + event.getServer().getName());
             joins.put(event.getServer().getId(), new AbstractMap.SimpleEntry<>(event.getUser().getDiscriminatedName(), System.currentTimeMillis()));
         });
         moepsBot.getDiscordApi().addServerMemberLeaveListener(event -> {
-            MoepsBot.log(Level.INFO, event.getUser().getDiscriminatedName() + " left guild " + event.getServer().getName());
+            log(Level.INFO, event.getUser().getDiscriminatedName() + " left guild " + event.getServer().getName());
             leaves.put(event.getServer().getId(), new AbstractMap.SimpleEntry<>(event.getUser().getDiscriminatedName(), System.currentTimeMillis()));
             Config serverConfig = getConfig(event.getServer());
             if (serverConfig != null && serverConfig.hasPath("leaves.channel") && (!has(event.getServer(), "leaves.ignore-kicks") || !isKick(event))) {
-                String channelStr = serverConfig.getString("leaves.channel");
-                ServerTextChannel channel = event.getServer().getTextChannelById(channelStr).orElseGet(() -> {
-                    List<ServerTextChannel> channels = event.getServer().getTextChannelsByNameIgnoreCase(channelStr);
-                    return channels.isEmpty() ? null : channels.get(0);
-                });
+                ServerTextChannel channel = Utils.getTextChannel(event.getServer(), serverConfig.getString("leaves.channel"));
                 if (channel != null) {
                     if (serverConfig.hasPath("leaves.message")) {
                         List<String> messages = serverConfig.getStringList("leaves.message");

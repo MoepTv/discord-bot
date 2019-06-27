@@ -72,11 +72,11 @@ public class TextChannelManager extends Manager {
         }
         if (deleteDuration >= 0) {
             long adjustedDeleteDuration = Math.max(0, deleteDuration - ChronoUnit.MINUTES.between(message.getLastEditTimestamp().orElse(message.getCreationTimestamp()), Instant.now()));
-            MoepsBot.log(Level.FINE, "Auto deleting message " + message.getId() + " from " + getChannelPath(channel) + " by " + message.getAuthor().getDiscriminatedName() + " in " + adjustedDeleteDuration + " Minutes!");
+            log(Level.FINE, "Auto deleting message " + message.getId() + " from " + getChannelPath(channel) + " by " + message.getAuthor().getDiscriminatedName() + " in " + adjustedDeleteDuration + " Minutes!");
 
             Runnable run = () -> {
                 message.delete("Auto deleted after " + adjustedDeleteDuration + " Minutes");
-                MoepsBot.log(Level.FINE, "Auto deleted message " + message.getId() + " from " + getChannelPath(channel) + " by " + message.getAuthor().getDiscriminatedName());
+                log(Level.FINE, "Auto deleted message " + message.getId() + " from " + getChannelPath(channel) + " by " + message.getAuthor().getDiscriminatedName());
             };
 
             if (adjustedDeleteDuration > 0) {

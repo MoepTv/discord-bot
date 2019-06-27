@@ -22,10 +22,15 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
+import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.permission.Role;
+import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class Utils {
 
@@ -57,5 +62,21 @@ public class Utils {
             string = string.replace("%" + replacements[i] + "%", replacements[i+1]);
         }
         return string;
+    }
+
+    public static boolean hasRole(User user, Server server, List<String> roles) {
+        for (Role role : user.getRoles(server)) {
+            if (roles.contains(role.getName()) || roles.contains(role.getIdAsString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static ServerTextChannel getTextChannel(Server server, String channelStr) {
+        return server.getTextChannelById(channelStr).orElseGet(() -> {
+            List<ServerTextChannel> channels = server.getTextChannelsByNameIgnoreCase(channelStr);
+            return channels.isEmpty() ? null : channels.get(0);
+        });
     }
 }

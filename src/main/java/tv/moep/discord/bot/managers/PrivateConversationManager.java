@@ -83,17 +83,17 @@ public class PrivateConversationManager extends Manager {
             lastMessage.put(event.getMessageAuthor().getId(), System.currentTimeMillis());
 
             String sender = event.getMessageAuthor().getDiscriminatedName();
-            MoepsBot.log(Level.INFO, "PM from " + sender + ": " + event.getReadableMessageContent());
+            log(Level.INFO, "PM from " + sender + ": " + event.getReadableMessageContent());
 
             Topic topic = getTopicFromMessage(event.getMessage());
             if (topic != null) {
-                MoepsBot.log(Level.FINE, sender + " | Matched topic '" + topic.getName() + "'");
+                log(Level.FINE, sender + " | Matched topic '" + topic.getName() + "'");
                 if (topic.isOnlyOnce()) {
                     once.get(topic.getName()).add(event.getMessageAuthor().getId());
                 }
                 if (!topic.getResponses().isEmpty()) {
                     String response = topic.getResponses().get(RANDOM.nextInt(topic.getResponses().size()));
-                    MoepsBot.log(Level.FINE, sender + " | Selected response: " + response);
+                    log(Level.FINE, sender + " | Selected response: " + response);
                     new Thread(() -> {
                         try (NonThrowingAutoCloseable closeable = event.getPrivateChannel().get().typeContinuouslyAfter(1, TimeUnit.SECONDS)) {
                             synchronized (response) {
@@ -103,10 +103,10 @@ public class PrivateConversationManager extends Manager {
                             e.printStackTrace();
                         }
                         event.getPrivateChannel().get().sendMessage(Utils.replacePlaceholders(response));
-                        MoepsBot.log(Level.FINE, sender + " | Message sent!");
+                        log(Level.FINE, sender + " | Message sent!");
                     }).start();
                 } else {
-                    MoepsBot.log(Level.FINE, sender + " | Topic has no responses!");
+                    log(Level.FINE, sender + " | Topic has no responses!");
                 }
             }
         });

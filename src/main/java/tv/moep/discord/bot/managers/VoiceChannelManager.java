@@ -24,9 +24,9 @@ import com.typesafe.config.ConfigValueType;
 import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
-import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.Utils;
 
 import java.util.List;
 import java.util.Optional;
@@ -66,11 +66,8 @@ public class VoiceChannelManager extends Manager {
         String path = "games.\"" + activity.getName() + "\"";
         if (channelConfig != null && channelConfig.hasPath(path)) {
             if (channelConfig.hasPath("ignoreRoles")) {
-                List<String> ignoredRoles = channelConfig.getStringList("ignoreRoles");
-                for (Role role : user.getRoles(voiceChannel.getServer())) {
-                    if (ignoredRoles.contains(role.getName()) || ignoredRoles.contains(role.getIdAsString())) {
-                        return Optional.empty();
-                    }
+                if (Utils.hasRole(user, voiceChannel.getServer(), channelConfig.getStringList("ignoreRoles"))) {
+                    return Optional.empty();
                 }
             }
 
@@ -90,7 +87,7 @@ public class VoiceChannelManager extends Manager {
             }
             if (targetChannel != null) {
                 user.move(targetChannel);
-                MoepsBot.log(Level.FINE, "Moved " + user.getDiscriminatedName() + " from channel " + voiceChannel.getName() + "/" + voiceChannel.getIdAsString() + " to " + targetChannel.getName() + "/" + targetChannel.getIdAsString() + " because he was playing " + activity.getName());
+                log(Level.FINE, "Moved " + user.getDiscriminatedName() + " from channel " + voiceChannel.getName() + "/" + voiceChannel.getIdAsString() + " to " + targetChannel.getName() + "/" + targetChannel.getIdAsString() + " because he was playing " + activity.getName());
                 return Optional.of(targetChannel);
             }
         }

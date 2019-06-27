@@ -21,16 +21,19 @@ package tv.moep.discord.bot.managers;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import org.javacord.api.entity.channel.ServerChannel;
-import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.server.Server;
 import tv.moep.discord.bot.MoepsBot;
 
+import java.util.logging.Level;
+
 public abstract class Manager {
     private final Config config;
+    private final String name;
     private final MoepsBot moepsBot;
 
     protected Manager(MoepsBot moepsBot, String name) {
         this.moepsBot = moepsBot;
+        this.name = name;
         config = moepsBot.getConfig(name);
     }
 
@@ -91,5 +94,9 @@ public abstract class Manager {
             return getConfig().getInt(channel.getServer().getId() + "." + path);
         }
         return -1;
+    }
+
+    protected void log(Level level, String message) {
+        MoepsBot.log(level, "[" + name + "] " + message);
     }
 }
