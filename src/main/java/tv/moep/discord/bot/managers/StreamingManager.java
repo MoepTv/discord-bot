@@ -211,7 +211,7 @@ public class StreamingManager extends Manager {
         if (user != null) {
             streamData = getStreamData(user);
             if (!user.isBot()) {
-                log(Level.FINE, user.getDiscriminatedName() + " started streaming " + title + " at " + streamingUrl);
+                log(Level.FINE, user.getDiscriminatedName() + " started streaming " + game + " - " + title + " at " + streamingUrl);
             }
         } else {
             streamData = getStreamData(rawName);
@@ -292,21 +292,23 @@ public class StreamingManager extends Manager {
     private void updateNotificationMessage(Server server, String streamingUrl, String message) {
         Config serverConfig = getConfig(server);
         ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
-        if (channel != null) {
-            channel.getMessages(100).thenAccept(ms -> {
-                for (Message m : ms) {
-                    if (m.getAuthor().isYourself() && m.getContent().contains(streamingUrl)) {
-                        if (message.equalsIgnoreCase("delete")) {
-                            m.delete("Stream is now offline");
-                        } else {
-                            m.edit(message);
-                        }
-                        break;
-                    }
-                }
-            });
+        if (channel == null) {
+            log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel") + " on server " + server.getName() + "/" + server.getId());
+            return;
         }
-        log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel") + " on server " + server.getName() + "/" + server.getId());
+        channel.getMessages(100).thenAccept(ms -> {
+            for (Message m : ms.descendingSet()) {
+                if (m.getAuthor().isYourself() && m.getContent().contains(streamingUrl)) {
+                    if (message.equalsIgnoreCase("delete")) {
+                        m.delete("Stream is now offline");
+                    } else {
+                        m.edit(message);
+                    }
+                    break;
+                }
+            }
+        });
+
     }
 
     private void checkForMarkRemoval(ServerVoiceChannel voiceChannel) {
@@ -321,6 +323,7 @@ public class StreamingManager extends Manager {
     private void unmarkChannelName(ServerVoiceChannel voiceChannel) {
         if (isMarked(voiceChannel)) {
             voiceChannel.updateName(getUnmarkedName(voiceChannel));
+            log(Level.FINE, "Removed stream marker from " + voiceChannel.getName());
         }
     }
 
@@ -334,6 +337,7 @@ public class StreamingManager extends Manager {
     private void markChannelName(ServerVoiceChannel voiceChannel) {
         if (!isMarked(voiceChannel)) {
             voiceChannel.updateName(markerPrefix + voiceChannel.getName() + markerSuffix);
+            log(Level.FINE, "Added stream marker to " + voiceChannel.getName());
         }
     }
 
