@@ -52,9 +52,9 @@ import java.util.logging.Level;
 
 public class StreamingManager extends Manager {
 
-    private final boolean markChannel;
-    private final String markerPrefix;
-    private final String markerSuffix;
+    private boolean markChannel;
+    private String markerPrefix;
+    private String markerSuffix;
     private TwitchClient twitchClient = null;
 
     private Map<String, String> listeners = new HashMap<>();
@@ -68,27 +68,36 @@ public class StreamingManager extends Manager {
 
     public StreamingManager(MoepsBot moepsBot) {
         super(moepsBot, "streaming");
+    }
 
+    public void reload() {
         if (getConfig().hasPath("twitch.listener")) {
             Config config = getConfig().getConfig("twitch.listener");
             if (!config.isEmpty()) {
-                TwitchClientBuilder twitchClientBuilder = TwitchClientBuilder.builder().withEnableHelix(true);
-                if (getConfig().hasPath("twitch.client.id") && getConfig().hasPath("twitch.client.secret")
-                        && !getConfig().getString("twitch.client.id").isEmpty()&& !getConfig().getString("twitch.client.secret").isEmpty()) {
-                    CredentialManager credentialManager = CredentialManagerBuilder.builder().build();
-                    credentialManager.registerIdentityProvider(new TwitchIdentityProvider(getConfig().getString("twitch.client.id"), getConfig().getString("twitch.client.secret"), ""));
-                    twitchClientBuilder.withCredentialManager(credentialManager);
+                boolean setupTwitchClient = twitchClient == null;
+                if (setupTwitchClient) {
+                    TwitchClientBuilder twitchClientBuilder = TwitchClientBuilder.builder().withEnableHelix(true);
+                    if (getConfig().hasPath("twitch.client.id") && getConfig().hasPath("twitch.client.secret")
+                            && !getConfig().getString("twitch.client.id").isEmpty() && !getConfig().getString("twitch.client.secret").isEmpty()) {
+                        CredentialManager credentialManager = CredentialManagerBuilder.builder().build();
+                        credentialManager.registerIdentityProvider(new TwitchIdentityProvider(getConfig().getString("twitch.client.id"), getConfig().getString("twitch.client.secret"), ""));
+                        twitchClientBuilder.withCredentialManager(credentialManager);
+                    }
+                    twitchClient = twitchClientBuilder.build();
                 }
-                twitchClient = twitchClientBuilder.build();
+                Map<String, String> newListeners = new HashMap<>();
                 for (Map.Entry<String, ConfigValue> entry : config.root().entrySet()) {
                     if (entry.getValue().valueType() == ConfigValueType.STRING) {
                         String twitchName = (String) entry.getValue().unwrapped();
-                        listeners.put(twitchName.toLowerCase(), entry.getKey());
-                        twitchClient.getClientHelper().enableStreamEventListener(twitchName);
+                        newListeners.put(twitchName.toLowerCase(), entry.getKey());
+                        if (!listeners.containsKey(twitchName.toLowerCase())) {
+                            twitchClient.getClientHelper().enableStreamEventListener(twitchName);
+                        }
                     }
                 }
+                listeners = newListeners;
 
-                if (listeners.size() > 0) {
+                if (setupTwitchClient && listeners.size() > 0) {
                     twitchClient.getEventManager().onEvent(ChannelGoLiveEvent.class).subscribe(event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
@@ -132,19 +141,19 @@ public class StreamingManager extends Manager {
         markerPrefix = getConfig().getString("streaming-marker.prefix");
         markerSuffix = getConfig().getString("streaming-marker.suffix");
 
-        moepsBot.getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
+        getMoepsBot().getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
             if (markChannel && isStreaming(event.getUser())) {
                 markChannelName(event.getChannel());
             }
         });
 
-        moepsBot.getDiscordApi().addServerVoiceChannelMemberLeaveListener(event -> {
+        getMoepsBot().getDiscordApi().addServerVoiceChannelMemberLeaveListener(event -> {
             if (markChannel && isStreaming(event.getUser())) {
                 checkForMarkRemoval(event.getChannel());
             }
         });
 
-        moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
+        getMoepsBot().getDiscordApi().addUserChangeActivityListener(event -> {
             if (event.getNewActivity().isPresent() && event.getNewActivity().get().getType() == ActivityType.STREAMING) {
                 onLive(
                         event.getUser(),

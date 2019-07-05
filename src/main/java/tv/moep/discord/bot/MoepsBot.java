@@ -75,7 +75,7 @@ public class MoepsBot {
 
     private DiscordApi discordApi;
 
-    private StreamingManager streamingManager;
+    private final StreamingManager streamingManager = new StreamingManager(this);
     private VoiceChannelManager voiceChannelManager;
     private PrivateConversationManager privateConversationManager;
     private JoinLeaveManager joinLeaveManager;
@@ -152,7 +152,7 @@ public class MoepsBot {
             scheduler = Executors.newScheduledThreadPool(1);
 
             voiceChannelManager = new VoiceChannelManager(this);
-            streamingManager = new StreamingManager(this);
+            streamingManager.reload();
             privateConversationManager = new PrivateConversationManager(this);
             joinLeaveManager = new JoinLeaveManager(this);
             textChannelManager = new TextChannelManager(this);
