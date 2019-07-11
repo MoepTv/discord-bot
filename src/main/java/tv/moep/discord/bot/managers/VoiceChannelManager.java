@@ -71,7 +71,7 @@ public class VoiceChannelManager extends Manager {
                 }
             }
 
-            ConfigValue value = getConfig().getValue(path);
+            ConfigValue value = channelConfig.getValue(path);
             ServerVoiceChannel targetChannel = null;
             if (value.valueType() == ConfigValueType.STRING) {
                 targetChannel = voiceChannel.getServer().getVoiceChannelById((String) value.unwrapped()).orElse(null);
