@@ -64,7 +64,7 @@ public class RoleManager extends Manager {
             moepsBot.registerCommand(type.name() + " <name>".toLowerCase(), Permission.USER, (sender, args) -> {
                 if (sender instanceof DiscordSender) {
                     if (args.length > 0) {
-                        if (updateRoles(((DiscordSender) sender).getUser(), type, String.join(" ", args), sender.getServer())) {
+                        if (updateRoles(((DiscordSender) sender).getUser(), type, String.join(" ", args), ((DiscordSender) sender).getServer())) {
                             sender.sendMessage("Set role for `" + String.join(" ", args) + "`");
                         } else {
                             sender.sendMessage("No role for `" + String.join(" ", args) + "` found!");

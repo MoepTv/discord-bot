@@ -42,13 +42,17 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.Permission;
 import tv.moep.discord.bot.Utils;
+import tv.moep.discord.bot.commands.Command;
+import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class StreamingManager extends Manager {
 
@@ -68,6 +72,47 @@ public class StreamingManager extends Manager {
 
     public StreamingManager(MoepsBot moepsBot) {
         super(moepsBot, "streaming");
+        Command<DiscordSender> streamCommand = moepsBot.registerCommand("stream [list|setoffline [<user>]]", Permission.ADMIN, (sender, args) -> false);
+        streamCommand.registerSubCommand("list", ((sender, args) -> {
+            if (streams.size() > 0) {
+                sender.sendMessage("Live channels:\n" + streams.entrySet().stream()
+                        .map(e -> e.getKey() + ": " + e.getValue().getGame() + " - " + e.getValue().getTitle() + " - <" + e.getValue().getUrl() + ">")
+                        .collect(Collectors.joining("\n")));
+            } else {
+                sender.sendMessage("No stream live?");
+            }
+            return true;
+        }));
+        streamCommand.registerSubCommand("setoffline [<user>]", (sender, args) -> {
+            if (args.length == 0) {
+                StreamData streamData = getStreamData(sender.getUser());
+                if (streamData == null) {
+                    sender.sendMessage("You are not online?");
+                    return true;
+                }
+
+                onOffline(sender.getUser(), sender.getUser().getDiscriminatedName());
+                sender.sendMessage("Set you to offline! Was streaming " + streamData.getGame() + " - " + streamData.getTitle() + " - <" + streamData.getUrl() + ">");
+                return true;
+            } else if (args.length == 1) {
+                User user = moepsBot.getUser(args[0]);
+                if (user == null || !user.getMutualServers().contains(sender.getServer())) {
+                    sender.sendMessage("The user `" + args[0] + "` wasn't found?");
+                    return true;
+                }
+
+                StreamData streamData = getStreamData(user);
+                if (streamData == null) {
+                    sender.sendMessage(user.getDiscriminatedName() + " is not online?");
+                    return true;
+                }
+
+                onOffline(user, user.getDiscriminatedName());
+                sender.sendMessage("Set " + user.getDiscriminatedName() + " to offline! Was streaming " + streamData.getGame() + " - " + streamData.getTitle() + " - <" + streamData.getUrl() + ">");
+                return true;
+            }
+            return false;
+        });
     }
 
     public void reload() {

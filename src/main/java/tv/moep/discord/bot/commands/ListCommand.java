@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ListCommand extends Command {
+public class ListCommand extends Command<DiscordSender> {
     private static final SimpleDateFormat FORMAT = new SimpleDateFormat();
 
     public ListCommand(MoepsBot moepsBot) {
@@ -58,7 +58,7 @@ public class ListCommand extends Command {
     }
 
     @Override
-    public boolean execute(CommandSender sender, String[] args) {
+    public boolean execute(DiscordSender sender, String[] args) {
         return false;
     }
 }

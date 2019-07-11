@@ -94,7 +94,6 @@ public class DiscordSender implements CommandSender {
         return false;
     }
 
-    @Override
     public Server getServer() {
         return message.getServer().orElse(null);
     }

@@ -198,20 +198,21 @@ public class MoepsBot {
         return ConfigFactory.parseFile(new File(name + ".conf")).withFallback(ConfigFactory.load(name + ".conf"));
     }
 
-    public void registerCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
-        registerCommand(new Command(usage, permission) {
+    public <T extends CommandSender> Command<T> registerCommand(String usage, Permission permission, BiFunction<T, String[], Boolean> execute) {
+        return registerCommand(new Command<T>(usage, permission) {
             @Override
-            public boolean execute(CommandSender sender, String[] args) {
+            public boolean execute(T sender, String[] args) {
                 return execute.apply(sender, args);
             }
         });
     }
 
-    public void registerCommand(Command command) {
+    public <T extends CommandSender>Command<T> registerCommand(Command<T> command) {
         commands.put(command.getName().toLowerCase(), command);
         for (String alias : command.getAliases()) {
             commands.putIfAbsent(alias, command);
         }
+        return command;
     }
 
     private Command getCommand(String name) {

@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 @Getter
-public abstract class Command {
+public abstract class Command<T extends CommandSender> {
     private final Command parent;
     private final String name;
     private final String usage;
@@ -56,17 +56,17 @@ public abstract class Command {
         this.aliases = Arrays.asList(aliases);
     }
 
-    public abstract boolean execute(CommandSender sender, String[] args);
+    public abstract boolean execute(T sender, String[] args);
 
 
-    public boolean runCommand(CommandSender sender, String[] args) {
+    public boolean runCommand(T sender, String[] args) {
         if (!sender.hasPermission(getPermission())) {
             sender.sendMessage("You need to at least be an " + getPermission() + " to run this command!");
             return true;
         }
 
         if (args.length > 0) {
-            Command subCommand = getSubCommand(args[0]);
+            Command<T> subCommand = getSubCommand(args[0]);
             if (subCommand != null) {
                 return subCommand.runCommand(sender, Arrays.copyOfRange(args, 1, args.length));
             }
@@ -74,27 +74,27 @@ public abstract class Command {
         return execute(sender, args);
     }
 
-    public void registerSubCommand(String usage, BiFunction<CommandSender, String[], Boolean> execute) {
+    public void registerSubCommand(String usage, BiFunction<T, String[], Boolean> execute) {
         registerSubCommand(usage, getPermission(), execute);
     }
 
-    public void registerSubCommand(String usage, Permission permission, BiFunction<CommandSender, String[], Boolean> execute) {
-        registerSubCommand(new Command(this, usage, permission) {
+    public void registerSubCommand(String usage, Permission permission, BiFunction<T, String[], Boolean> execute) {
+        registerSubCommand(new Command<T>(this, usage, permission) {
             @Override
-            public boolean execute(CommandSender sender, String[] args) {
+            public boolean execute(T sender, String[] args) {
                 return execute.apply(sender, args);
             }
         });
     }
 
-    public void registerSubCommand(Command command) {
+    public void registerSubCommand(Command<T> command) {
         subCommands.put(command.getName().toLowerCase(), command);
         for (String alias : command.getAliases()) {
             subCommands.putIfAbsent(alias, command);
         }
     }
 
-    public Command getSubCommand(String name) {
+    public Command<T> getSubCommand(String name) {
         return subCommands.get(name.toLowerCase());
     }
 }

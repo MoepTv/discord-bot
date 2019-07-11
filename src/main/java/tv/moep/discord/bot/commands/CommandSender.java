@@ -18,7 +18,6 @@ package tv.moep.discord.bot.commands;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import org.javacord.api.entity.server.Server;
 import tv.moep.discord.bot.Permission;
 
 public interface CommandSender {
@@ -29,8 +28,6 @@ public interface CommandSender {
     void sendMessage(String title, String message);
 
     boolean hasPermission(Permission permission);
-
-    Server getServer();
 
     void confirm();
 
