@@ -243,16 +243,28 @@ public class MoepsBot {
     }
 
     public User getUser(String discordId) {
-        if (discordId != null && discordId.contains("#")) {
-            return getDiscordApi().getCachedUserByDiscriminatedName(discordId).orElseGet(() -> {
-                for (Server server : getDiscordApi().getServers()) {
-                    Optional<User> member = server.getMemberByDiscriminatedName(discordId);
-                    if (member.isPresent()) {
-                        return member.get();
+        if (discordId != null) {
+            if (discordId.contains("#")) {
+                return getDiscordApi().getCachedUserByDiscriminatedName(discordId).orElseGet(() -> {
+                    for (Server server : getDiscordApi().getServers()) {
+                        Optional<User> member = server.getMemberByDiscriminatedName(discordId);
+                        if (member.isPresent()) {
+                            return member.get();
+                        }
                     }
-                }
-                return null;
-            });
+                    return null;
+                });
+            } else {
+                return getDiscordApi().getCachedUserById(discordId).orElseGet(() -> {
+                    for (Server server : getDiscordApi().getServers()) {
+                        Optional<User> member = server.getMemberById(discordId);
+                        if (member.isPresent()) {
+                            return member.get();
+                        }
+                    }
+                    return null;
+                });
+            }
         }
         return null;
     }

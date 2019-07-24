@@ -316,6 +316,7 @@ public class StreamingManager extends Manager {
 
     private void onOffline(User user, String rawName) {
         StreamData streamData = getStreamData(rawName);
+        streams.remove(rawName.toLowerCase());
         if (user != null) {
             user.getConnectedVoiceChannels().forEach(this::checkForMarkRemoval);
 
