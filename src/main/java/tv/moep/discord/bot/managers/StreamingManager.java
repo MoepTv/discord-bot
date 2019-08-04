@@ -30,6 +30,7 @@ import com.github.twitch4j.common.events.channel.ChannelChangeTitleEvent;
 import com.github.twitch4j.common.events.channel.ChannelGoLiveEvent;
 import com.github.twitch4j.common.events.channel.ChannelGoOfflineEvent;
 import com.github.twitch4j.helix.domain.Game;
+import com.github.twitch4j.helix.domain.Video;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
@@ -148,7 +149,7 @@ public class StreamingManager extends Manager {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             if (!streams.containsKey(discordId)) {
                                 User user = getMoepsBot().getUser(discordId);
-                                onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), getGame(event.getGameId()), event.getTitle());
+                                onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), event.getGameId(), getGame(event.getGameId()), event.getTitle());
                             }
                         }
                     });
@@ -204,6 +205,7 @@ public class StreamingManager extends Manager {
                         event.getUser(),
                         event.getUser().getDiscriminatedName(),
                         event.getNewActivity().get().getStreamingUrl().orElse(null),
+                        -1,
                         event.getNewActivity().get().getName(),
                         event.getNewActivity().get().getDetails().orElse("")
                 );
@@ -260,7 +262,7 @@ public class StreamingManager extends Manager {
         return gameCache.get(gameId);
     }
 
-    private void onLive(User user, String rawName, String streamingUrl, String game, String title) {
+    private void onLive(User user, String rawName, String streamingUrl, long gameId, String game, String title) {
         StreamData streamData;
         if (user != null) {
             streamData = getStreamData(user);
@@ -272,7 +274,7 @@ public class StreamingManager extends Manager {
             log(Level.FINE, rawName + " started streaming at " + streamingUrl);
         }
         if (streamData == null) {
-            streams.put(rawName.toLowerCase(), new StreamData(streamingUrl, game, title));
+            streams.put(rawName.toLowerCase(), new StreamData(streamingUrl, gameId, game, title));
         } else {
             streamData.setGame(game);
             streamData.setTitle(title);
@@ -328,6 +330,8 @@ public class StreamingManager extends Manager {
         }
 
         if (streamData != null && streamData.getUrl() != null) {
+
+            String vodUrl = getVodUrl(streamData.getUrl(), streamData.getGameId());
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
                 Config serverConfig = getConfig(server);
                 if (serverConfig != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
@@ -336,12 +340,27 @@ public class StreamingManager extends Manager {
                             "username", user != null ? user.getDisplayName(server) : rawName,
                             "game", streamData.getGame(),
                             "title", streamData.getTitle(),
-                            "url", streamData.getUrl()
+                            "url", streamData.getUrl(),
+                            "vodurl", vodUrl
                     );
                     updateNotificationMessage(server, streamData.getUrl(), newMessage);
                 }
             }
         }
+    }
+
+    private String getVodUrl(String streamUrl, long gameId) {
+        if (streamUrl.contains("twitch.com")) {
+            String userLogin = streamUrl.split("twitch.com/")[1];
+            List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(null, null, Collections.singletonList(userLogin)).execute().getUsers();
+            if (!userList.isEmpty()) {
+                List<Video> videoList = twitchClient.getHelix().getVideos(null, userList.get(0).getId(), gameId > -1 ? gameId : null, null, "day", null, "archive", null, null, 1).execute().getVideos();
+                if (!videoList.isEmpty()) {
+                    return videoList.get(0).getUrl();
+                }
+            }
+        }
+        return streamUrl;
     }
 
     private void updateNotificationMessage(Server server, String streamingUrl, String message) {
@@ -404,6 +423,7 @@ public class StreamingManager extends Manager {
     @AllArgsConstructor
     private class StreamData {
         private final String url;
+        private long gameId;
         private String game;
         private String title;
     }
