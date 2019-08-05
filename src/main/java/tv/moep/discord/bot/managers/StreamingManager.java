@@ -48,6 +48,8 @@ import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.DiscordSender;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -376,6 +378,8 @@ public class StreamingManager extends Manager {
                 if (m.getAuthor().isYourself() && m.getContent().contains(streamingUrl)) {
                     if (message.equalsIgnoreCase("delete")) {
                         m.delete("Stream is now offline");
+                    } else if (m.getCreationTimestamp().isAfter(Instant.now().minus(Duration.ofMinutes(5)))) {
+                        m.delete("Stream started less than 5 minutes ago");
                     } else {
                         m.edit(message);
                     }
