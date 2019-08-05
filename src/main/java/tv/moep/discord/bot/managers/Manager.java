@@ -27,13 +27,17 @@ import tv.moep.discord.bot.MoepsBot;
 import java.util.logging.Level;
 
 public abstract class Manager {
-    private final Config config;
+    private Config config;
     private final String name;
     private final MoepsBot moepsBot;
 
     protected Manager(MoepsBot moepsBot, String name) {
         this.moepsBot = moepsBot;
         this.name = name;
+        loadConfig();
+    }
+
+    protected void loadConfig() {
         config = moepsBot.getConfig(name);
     }
 

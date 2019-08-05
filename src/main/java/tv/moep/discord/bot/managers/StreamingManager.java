@@ -117,6 +117,7 @@ public class StreamingManager extends Manager {
     }
 
     public void reload() {
+        loadConfig();
         if (getConfig().hasPath("twitch.listener")) {
             Config config = getConfig().getConfig("twitch.listener");
             if (!config.isEmpty()) {
