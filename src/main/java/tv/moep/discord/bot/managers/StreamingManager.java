@@ -150,7 +150,7 @@ public class StreamingManager extends Manager {
                     twitchClient.getEventManager().onEvent(ChannelGoLiveEvent.class).subscribe(event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
-                            if (!streams.containsKey(discordId)) {
+                            if (!streams.containsKey(discordId.toLowerCase())) {
                                 User user = getMoepsBot().getUser(discordId);
                                 onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), event.getGameId(), getGame(event.getGameId()), event.getTitle());
                             }
@@ -159,7 +159,7 @@ public class StreamingManager extends Manager {
                     twitchClient.getEventManager().onEvent(ChannelChangeGameEvent.class).subscribe(event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
-                            if (streams.containsKey(discordId)) {
+                            if (streams.containsKey(discordId.toLowerCase())) {
                                 User user = getMoepsBot().getUser(discordId);
                                 updateGame(user, discordId, getGame(event.getGameId()));
                             }
@@ -168,7 +168,7 @@ public class StreamingManager extends Manager {
                     twitchClient.getEventManager().onEvent(ChannelChangeTitleEvent.class).subscribe(event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
-                            if (streams.containsKey(discordId)) {
+                            if (streams.containsKey(discordId.toLowerCase())) {
                                 User user = getMoepsBot().getUser(discordId);
                                 updateTitle(user, discordId, event.getTitle());
                             }
