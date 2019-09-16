@@ -237,13 +237,14 @@ public class StreamingManager extends Manager {
     private void updateTitle(User user, String rawName, String title) {
         StreamData streamData = getStreamData(rawName);
         streamData.setTitle(title);
-
+        log(Level.FINE, rawName + " changed title to " + title);
         updateNotification(user, rawName, streamData);
     }
 
     private void updateGame(User user, String rawName, String game) {
         StreamData streamData = getStreamData(rawName);
         streamData.setGame(game);
+        log(Level.FINE, rawName + " changed game to " + game);
         updateNotification(user, rawName, streamData);
     }
 
