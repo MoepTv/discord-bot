@@ -153,6 +153,7 @@ public class StreamingManager extends Manager {
                             if (!streams.containsKey(discordId.toLowerCase())) {
                                 User user = getMoepsBot().getUser(discordId);
                                 onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), event.getGameId(), getGame(event.getGameId()), event.getTitle());
+                                log(Level.FINE, discordId + " stream online due to twitch listener");
                             }
                         }
                     });
@@ -179,6 +180,7 @@ public class StreamingManager extends Manager {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             User user = getMoepsBot().getUser(discordId);
                             onOffline(user, discordId);
+                            log(Level.FINE, discordId + " stream offline due to twitch listener");
                         }
                     });
                 }
@@ -212,8 +214,10 @@ public class StreamingManager extends Manager {
                         event.getNewActivity().get().getName(),
                         event.getNewActivity().get().getDetails().orElse("")
                 );
+                log(Level.FINE, event.getUser().getDiscriminatedName() + " stream online due to activity");
             } else if (event.getOldActivity().isPresent() && event.getOldActivity().get().getType() == ActivityType.STREAMING) {
                 onOffline(event.getUser(), event.getUser().getDiscriminatedName());
+                log(Level.FINE, event.getUser().getDiscriminatedName() + " stream offline due to activity");
             }
         });
     }
