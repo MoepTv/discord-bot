@@ -321,8 +321,7 @@ public class StreamingManager extends Manager {
     }
 
     private void onOffline(User user, String rawName) {
-        StreamData streamData = getStreamData(rawName);
-        streams.remove(rawName.toLowerCase());
+        StreamData streamData = streams.remove(rawName.toLowerCase());
         if (user != null) {
             user.getConnectedVoiceChannels().forEach(this::checkForMarkRemoval);
 
@@ -378,10 +377,13 @@ public class StreamingManager extends Manager {
             for (Message m : ms.descendingSet()) {
                 if (m.getAuthor().isYourself() && m.getContent().contains(streamingUrl)) {
                     if (message.equalsIgnoreCase("delete")) {
+                        log(Level.FINE, "Deleting message " + m.getIdAsString() + " due to config (" + message + ")");
                         m.delete("Stream is now offline");
                     } else if (m.getCreationTimestamp().isAfter(Instant.now().minus(Duration.ofMinutes(5)))) {
+                        log(Level.FINE, "Deleting message " + m.getIdAsString() + " due to it being less than 5 minutes old");
                         m.delete("Stream started less than 5 minutes ago");
                     } else {
+                        log(Level.FINE, "Editing message " + m.getIdAsString() + " to '" + message + "'");
                         m.edit(message);
                     }
                     break;
