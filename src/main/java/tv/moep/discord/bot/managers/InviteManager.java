@@ -64,18 +64,24 @@ public class InviteManager extends Manager {
                             if (invite.getUses() > inviteMap.get(invite.getCode())) {
                                 inviteMap.put(invite.getCode(), invite.getUses());
                                 foundInvite = invite;
-                                break;
                             }
-                        } else if (isValid(invite)) {
-                            if (foundInvite == null || invite.getCreationTimestamp().isAfter(foundInvite.getCreationTimestamp())) {
-                                // Assume missing invite and use last created invite
-                                foundInvite = invite;
+                        }
+                    }
+                    if (foundInvite == null) {
+                        for (RichInvite invite : invites) {
+                            if (!inviteMap.containsKey(invite.getCode()) && isValid(invite)) {
+                                if (foundInvite == null || invite.getCreationTimestamp().isAfter(foundInvite.getCreationTimestamp())) {
+                                    // Assume missing invite and use last created invite
+                                    foundInvite = invite;
+                                }
+                                inviteMap.put(invite.getCode(), invite.getUses());
                             }
-                            inviteMap.put(invite.getCode(), invite.getUses());
                         }
                     }
                     if (foundInvite != null) {
                         handleInvite(event.getUser(), foundInvite, event.getServer());
+                    } else {
+                        log(Level.FINE, event.getUser().getDiscriminatedName() + " joined with an unknown invite ");
                     }
                 });
             }
