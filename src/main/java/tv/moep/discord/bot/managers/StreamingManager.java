@@ -48,12 +48,16 @@ import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.DiscordSender;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -72,6 +76,7 @@ public class StreamingManager extends Manager {
     });
 
     private Map<String, StreamData> streams = new HashMap<>();
+    private Map<Long, ServerData> serverData = new HashMap<>();
 
     public StreamingManager(MoepsBot moepsBot) {
         super(moepsBot, "streaming");
@@ -116,6 +121,7 @@ public class StreamingManager extends Manager {
             }
             return false;
         });
+        moepsBot.getDiscordApi().getServers().forEach(this::getServerData);
     }
 
     public void reload() {
@@ -238,6 +244,10 @@ public class StreamingManager extends Manager {
         return streams.get(discordId.toLowerCase());
     }
 
+    private ServerData getServerData(Server server) {
+        return serverData.computeIfAbsent(server.getId(), id -> new ServerData(id, server.getIcon().isPresent() ? server.getIcon().get().getUrl() : null));
+    }
+
     private void updateTitle(User user, String rawName, String title) {
         StreamData streamData = getStreamData(rawName);
         streamData.setTitle(title);
@@ -291,27 +301,39 @@ public class StreamingManager extends Manager {
         if (streamingUrl != null) {
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
                 Config serverConfig = getConfig(server);
-                if (serverConfig != null && serverConfig.hasPath("announce.channel")) {
+                if (serverConfig != null && serverConfig.hasPath("announce")) {
                     if (user != null && serverConfig.hasPath("announce.roles") && !Utils.hasRole(user, server, serverConfig.getStringList("announce.roles"))) {
                         continue;
                     }
 
-                    String message = Utils.replace(
-                            serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%",
-                            "username", user != null ? user.getDisplayName(server) : rawName,
-                            "game", game,
-                            "title", title,
-                            "url", streamingUrl
-                    );
-                    if (streamData == null) {
-                        ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
-                        if (channel != null) {
-                            channel.sendMessage(message);
+                    ServerData serverData = getServerData(server);
+                    serverData.getLiveUsers().add(rawName.toLowerCase());
+
+                    if (serverConfig.hasPath("announce.channel")) {
+                        String message = Utils.replace(
+                                serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%",
+                                "username", user != null ? user.getDisplayName(server) : rawName,
+                                "game", game,
+                                "title", title,
+                                "url", streamingUrl
+                        );
+                        if (streamData == null) {
+                            ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
+                            if (channel != null) {
+                                channel.sendMessage(message);
+                            } else {
+                                log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel") + " on server " + server.getName() + "/" + server.getId());
+                            }
                         } else {
-                            log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel") + " on server " + server.getName() + "/" + server.getId());
+                            updateNotificationMessage(server, streamingUrl, message);
                         }
-                    } else {
-                        updateNotificationMessage(server, streamingUrl, message);
+                    }
+                    if (serverData.getLiveUsers().size() == 1 && serverConfig.hasPath("announce.icon.live")) {
+                        try {
+                            server.updateIcon(new URL(serverConfig.getString("announce.icon.live")));
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -341,16 +363,31 @@ public class StreamingManager extends Manager {
             String vodUrl = getVodUrl(streamData.getUrl(), streamData.getGameId());
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
                 Config serverConfig = getConfig(server);
-                if (serverConfig != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
-                    String newMessage = Utils.replace(
-                            serverConfig.getString("announce.offline"),
-                            "username", user != null ? user.getDisplayName(server) : rawName,
-                            "game", streamData.getGame(),
-                            "title", streamData.getTitle(),
-                            "url", streamData.getUrl(),
-                            "vodurl", vodUrl
-                    );
-                    updateNotificationMessage(server, streamData.getUrl(), newMessage);
+                if (serverConfig != null && serverConfig.hasPath("announce")) {
+                    ServerData serverData = getServerData(server);
+                    serverData.getLiveUsers().remove(rawName.toLowerCase());
+                    if (serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
+                        String newMessage = Utils.replace(
+                                serverConfig.getString("announce.offline"),
+                                "username", user != null ? user.getDisplayName(server) : rawName,
+                                "game", streamData.getGame(),
+                                "title", streamData.getTitle(),
+                                "url", streamData.getUrl(),
+                                "vodurl", vodUrl
+                        );
+                        updateNotificationMessage(server, streamData.getUrl(), newMessage);
+                    }
+                    if (serverData.getLiveUsers().isEmpty() && serverConfig.hasPath("announce.icon.live")) {
+                        if (serverConfig.hasPath("announce.icon.offline")) {
+                            try {
+                                server.updateIcon(new URL(serverConfig.getString("announce.icon.offline")));
+                            } catch (MalformedURLException e) {
+                                e.printStackTrace();
+                            }
+                        } else if (serverData.getIcon() != null) {
+                            server.updateIcon(serverData.getIcon());
+                        }
+                    }
                 }
             }
         }
@@ -438,5 +475,12 @@ public class StreamingManager extends Manager {
         private long gameId;
         private String game;
         private String title;
+    }
+
+    @Data
+    private class ServerData {
+        private final Long id;
+        private final URL icon;
+        private Set<String> liveUsers = new LinkedHashSet<>();
     }
 }
