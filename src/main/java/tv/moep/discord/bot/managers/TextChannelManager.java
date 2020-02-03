@@ -55,8 +55,15 @@ public class TextChannelManager extends Manager {
                 return;
             }
 
-            if (has(event.getServerTextChannel().get(), "commands") && event.getMessageContent().startsWith(getString(event.getServerTextChannel().get(), "command-prefix", "!"))) {
-                moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), event.getReadableMessageContent().substring(1));
+            if (has(event.getServerTextChannel().get(), "commands")) {
+                String message = event.getMessageContent();
+                if (moepsBot.getConfig().getBoolean("debug")) {
+                    MoepsBot.log(Level.INFO, event.getMessage().getAuthor().getDiscriminatedName() + ": " + message);
+                }
+                String commandPrefix = getString(event.getServerTextChannel().get(), "command-prefix", "!");
+                if (message.startsWith(commandPrefix)) {
+                    moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), message.substring(commandPrefix.length()).trim());
+                }
             }
 
             checkForDeletion(event.getServerTextChannel().get(), event.getMessage());
