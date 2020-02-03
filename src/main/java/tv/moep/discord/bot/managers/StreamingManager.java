@@ -121,10 +121,10 @@ public class StreamingManager extends Manager {
             }
             return false;
         });
-        moepsBot.getDiscordApi().getServers().forEach(this::getServerData);
     }
 
     public void reload() {
+        getMoepsBot().getDiscordApi().getServers().forEach(this::getServerData);
         loadConfig();
         if (getConfig().hasPath("twitch.listener")) {
             Config config = getConfig().getConfig("twitch.listener");
