@@ -100,6 +100,16 @@ public abstract class Manager {
         return -1;
     }
 
+    public String getString(ServerChannel channel, String path, String def) {
+        if (getConfig().hasPath(channel.getServer().getId() + "." + channel.getId() + "." + path)) {
+            return getConfig().getString(channel.getServer().getId() + "." + channel.getId() + "." + path);
+        }
+        if (getConfig().hasPath(channel.getServer().getId() + "." + path)) {
+            return getConfig().getString(channel.getServer().getId() + "." + path);
+        }
+        return def;
+    }
+
     protected void log(Level level, String message) {
         MoepsBot.log(level, "[" + name + "] " + message);
     }
