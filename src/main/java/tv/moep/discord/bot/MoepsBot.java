@@ -19,6 +19,7 @@ package tv.moep.discord.bot;
  */
 
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import lombok.Getter;
 import org.javacord.api.DiscordApi;
@@ -103,6 +104,11 @@ public class MoepsBot {
     // TODO: Proper logging
     public static void log(Level level, String message) {
         System.out.println(TIME_FORMAT.format(new Date(System.currentTimeMillis())) + " " + level.getName() + " " + message);
+    }
+
+    public static void log(Level level, String message, Throwable throwable) {
+        log(level, message);
+        throwable.printStackTrace();
     }
 
     public MoepsBot() {
@@ -195,7 +201,19 @@ public class MoepsBot {
 
     public Config getConfig(String name) {
         saveResource(name + ".conf");
-        return ConfigFactory.parseFile(new File(name + ".conf")).withFallback(ConfigFactory.load(name + ".conf"));
+        Config fallbackConfig;
+        try {
+            fallbackConfig = ConfigFactory.load(name + ".conf");
+        } catch (ConfigException e) {
+            log(Level.SEVERE, "Error while loading " + name + ".conf fallback config!", e);
+            fallbackConfig = ConfigFactory.empty("Empty " + name + ".conf fallback due to loading error: " + e.getMessage());
+        }
+        try {
+            return ConfigFactory.parseFile(new File(name + ".conf")).withFallback(fallbackConfig);
+        } catch (ConfigException e) {
+            log(Level.SEVERE, "Error while loading " + name + ".conf config!", e);
+            return fallbackConfig;
+        }
     }
 
     public <T extends CommandSender> Command<T> registerCommand(String usage, Permission permission, BiFunction<T, String[], Boolean> execute) {
