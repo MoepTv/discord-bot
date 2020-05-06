@@ -22,6 +22,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.philippheuer.credentialmanager.CredentialManager;
 import com.github.philippheuer.credentialmanager.CredentialManagerBuilder;
+import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
+import com.github.philippheuer.events4j.simple.SimpleEventHandler;
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
@@ -66,12 +68,13 @@ public class StreamingManager extends Manager {
     private boolean markChannel;
     private String markerPrefix;
     private String markerSuffix;
+    private String oAuthToken = "";
     private TwitchClient twitchClient = null;
 
     private Map<String, String> listeners = new HashMap<>();
 
-    private LoadingCache<Long, String> gameCache = Caffeine.newBuilder().build((aLong) -> {
-            List<Game> games = twitchClient.getHelix().getGames(Collections.singletonList(String.valueOf(aLong)), null).execute().getGames();
+    private LoadingCache<String, String> gameCache = Caffeine.newBuilder().build((gameId) -> {
+            List<Game> games = twitchClient.getHelix().getGames(oAuthToken, Collections.singletonList(gameId), null).execute().getGames();
             return games.isEmpty() ? null : games.iterator().next().getName();
     });
 
@@ -132,11 +135,28 @@ public class StreamingManager extends Manager {
                 boolean setupTwitchClient = twitchClient == null;
                 if (setupTwitchClient) {
                     TwitchClientBuilder twitchClientBuilder = TwitchClientBuilder.builder().withEnableHelix(true);
+                    String redirectUrl = getConfig().hasPath("twitch.client.redirecturl") ? getConfig().getString("twitch.client.redirecturl") : "";
+                    if (getConfig().hasPath("twitch.client.oauth")) {
+                        oAuthToken = getConfig().getString("twitch.client.oauth");
+                    }
                     if (getConfig().hasPath("twitch.client.id") && getConfig().hasPath("twitch.client.secret")
                             && !getConfig().getString("twitch.client.id").isEmpty() && !getConfig().getString("twitch.client.secret").isEmpty()) {
+                        if (oAuthToken.isEmpty()) {
+                            if (redirectUrl.isEmpty()) {
+                                log(Level.SEVERE, "Redirect URL is empty!");
+                            } else {
+                                log(Level.SEVERE, "OAuth token not set in config! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=");
+                            }
+                            return;
+                        }
                         CredentialManager credentialManager = CredentialManagerBuilder.builder().build();
-                        credentialManager.registerIdentityProvider(new TwitchIdentityProvider(getConfig().getString("twitch.client.id"), getConfig().getString("twitch.client.secret"), ""));
-                        twitchClientBuilder.withCredentialManager(credentialManager);
+                        credentialManager.registerIdentityProvider(new TwitchIdentityProvider(getConfig().getString("twitch.client.id"), getConfig().getString("twitch.client.secret"), redirectUrl));
+                        twitchClientBuilder = twitchClientBuilder
+                                .withCredentialManager(credentialManager)
+                                .withDefaultAuthToken(new OAuth2Credential("twitch", oAuthToken));
+                    } else {
+                        log(Level.SEVERE, "No client ID/secret provided!");
+                        return;
                     }
                     twitchClient = twitchClientBuilder.build();
                 }
@@ -153,7 +173,8 @@ public class StreamingManager extends Manager {
                 listeners = newListeners;
 
                 if (setupTwitchClient && listeners.size() > 0) {
-                    twitchClient.getEventManager().onEvent(ChannelGoLiveEvent.class).subscribe(event -> {
+                    SimpleEventHandler eventHandler = twitchClient.getEventManager().getEventHandler(SimpleEventHandler.class);
+                    eventHandler.onEvent(ChannelGoLiveEvent.class, event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             if (!streams.containsKey(discordId.toLowerCase())) {
@@ -163,7 +184,7 @@ public class StreamingManager extends Manager {
                             }
                         }
                     });
-                    twitchClient.getEventManager().onEvent(ChannelChangeGameEvent.class).subscribe(event -> {
+                    eventHandler.onEvent(ChannelChangeGameEvent.class, event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             if (streams.containsKey(discordId.toLowerCase())) {
@@ -172,7 +193,7 @@ public class StreamingManager extends Manager {
                             }
                         }
                     });
-                    twitchClient.getEventManager().onEvent(ChannelChangeTitleEvent.class).subscribe(event -> {
+                    eventHandler.onEvent(ChannelChangeTitleEvent.class, event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             if (streams.containsKey(discordId.toLowerCase())) {
@@ -181,7 +202,7 @@ public class StreamingManager extends Manager {
                             }
                         }
                     });
-                    twitchClient.getEventManager().onEvent(ChannelGoOfflineEvent.class).subscribe(event -> {
+                    eventHandler.onEvent(ChannelGoOfflineEvent.class, event -> {
                         if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             User user = getMoepsBot().getUser(discordId);
@@ -216,7 +237,7 @@ public class StreamingManager extends Manager {
                         event.getUser(),
                         event.getUser().getDiscriminatedName(),
                         event.getNewActivity().get().getStreamingUrl().orElse(null),
-                        -1,
+                        null,
                         event.getNewActivity().get().getName(),
                         event.getNewActivity().get().getDetails().orElse("")
                 );
@@ -276,11 +297,11 @@ public class StreamingManager extends Manager {
         }
     }
 
-    private String getGame(Long gameId) {
+    private String getGame(String gameId) {
         return gameCache.get(gameId);
     }
 
-    private void onLive(User user, String rawName, String streamingUrl, long gameId, String game, String title) {
+    private void onLive(User user, String rawName, String streamingUrl, String gameId, String game, String title) {
         StreamData streamData;
         if (user != null) {
             streamData = getStreamData(user);
@@ -393,12 +414,12 @@ public class StreamingManager extends Manager {
         }
     }
 
-    private String getVodUrl(String streamUrl, long gameId) {
+    private String getVodUrl(String streamUrl, String gameId) {
         if (streamUrl.contains("twitch.com")) {
             String userLogin = streamUrl.split("twitch.com/")[1];
-            List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(null, null, Collections.singletonList(userLogin)).execute().getUsers();
+            List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList(userLogin)).execute().getUsers();
             if (!userList.isEmpty()) {
-                List<Video> videoList = twitchClient.getHelix().getVideos(null, userList.get(0).getId(), gameId > -1 ? gameId : null, null, "day", null, "archive", null, null, 1).execute().getVideos();
+                List<Video> videoList = twitchClient.getHelix().getVideos(oAuthToken, null, userList.get(0).getId(), gameId, null, "day", null, "archive", null, null, 1).execute().getVideos();
                 if (!videoList.isEmpty()) {
                     return videoList.get(0).getUrl();
                 }
@@ -472,7 +493,7 @@ public class StreamingManager extends Manager {
     @AllArgsConstructor
     private class StreamData {
         private final String url;
-        private long gameId;
+        private String gameId;
         private String game;
         private String title;
     }
