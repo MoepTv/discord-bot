@@ -177,14 +177,7 @@ public class StreamingManager extends Manager {
                         String twitchName = (String) entry.getValue().unwrapped();
                         newListeners.put(twitchName.toLowerCase(), entry.getKey());
                         if (!listeners.containsKey(twitchName.toLowerCase())) {
-                            List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList(twitchName)).execute().getUsers();
-                            if (!userList.isEmpty()) {
-                                for (com.github.twitch4j.helix.domain.User user : userList) {
-                                    twitchClient.getClientHelper().enableStreamEventListener(user.getId(), user.getLogin());
-                                }
-                            } else {
-                                log(Level.WARNING, "Unable to register listener for " + twitchName + ". Channel was not found?");
-                            }
+                            twitchClient.getClientHelper().enableStreamEventListener(twitchName);
                         }
                     }
                 }
