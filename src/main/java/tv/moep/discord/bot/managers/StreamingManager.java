@@ -166,9 +166,9 @@ public class StreamingManager extends Manager {
                         if (userList.isEmpty()) {
                             log(Level.WARNING, "Unable to query API?");
                         }
-                    } catch (UnauthorizedException e) {
-                        log(Level.SEVERE, "OAuth token invalid! (" + e.getMessage() + ") Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=");
-
+                    } catch (Exception e) {
+                        log(Level.SEVERE, "OAuth token might be invalid! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=");
+                        throw e;
                     }
                 }
                 Map<String, String> newListeners = new HashMap<>();
