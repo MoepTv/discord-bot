@@ -31,6 +31,7 @@ import com.github.twitch4j.common.events.channel.ChannelChangeGameEvent;
 import com.github.twitch4j.common.events.channel.ChannelChangeTitleEvent;
 import com.github.twitch4j.common.events.channel.ChannelGoLiveEvent;
 import com.github.twitch4j.common.events.channel.ChannelGoOfflineEvent;
+import com.github.twitch4j.common.exception.UnauthorizedException;
 import com.github.twitch4j.helix.domain.Game;
 import com.github.twitch4j.helix.domain.Video;
 import com.typesafe.config.Config;
@@ -159,6 +160,16 @@ public class StreamingManager extends Manager {
                         return;
                     }
                     twitchClient = twitchClientBuilder.build();
+                    // Test client
+                    try {
+                        List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList("The_Moep")).execute().getUsers();
+                        if (!userList.isEmpty()) {
+                            log(Level.WARNING, "Unable to query API?");
+                        }
+                    } catch (UnauthorizedException e) {
+                        log(Level.SEVERE, "OAuth token invalid! (" + e.getMessage() + ") Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=");
+
+                    }
                 }
                 Map<String, String> newListeners = new HashMap<>();
                 for (Map.Entry<String, ConfigValue> entry : config.root().entrySet()) {
