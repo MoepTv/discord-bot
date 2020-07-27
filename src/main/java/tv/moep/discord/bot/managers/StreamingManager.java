@@ -27,11 +27,11 @@ import com.github.philippheuer.events4j.simple.SimpleEventHandler;
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
-import com.github.twitch4j.common.events.channel.ChannelChangeGameEvent;
-import com.github.twitch4j.common.events.channel.ChannelChangeTitleEvent;
-import com.github.twitch4j.common.events.channel.ChannelGoLiveEvent;
-import com.github.twitch4j.common.events.channel.ChannelGoOfflineEvent;
 import com.github.twitch4j.common.exception.UnauthorizedException;
+import com.github.twitch4j.events.ChannelChangeGameEvent;
+import com.github.twitch4j.events.ChannelChangeTitleEvent;
+import com.github.twitch4j.events.ChannelGoLiveEvent;
+import com.github.twitch4j.events.ChannelGoOfflineEvent;
 import com.github.twitch4j.helix.domain.Game;
 import com.github.twitch4j.helix.domain.Video;
 import com.typesafe.config.Config;
@@ -190,7 +190,7 @@ public class StreamingManager extends Manager {
                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                             if (!streams.containsKey(discordId.toLowerCase())) {
                                 User user = getMoepsBot().getUser(discordId);
-                                onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), event.getGameId(), getGame(event.getGameId()), event.getTitle());
+                                onLive(user, discordId, "https://twitch.tv/" + event.getChannel().getName(), event.getStream().getGameId(), getGame(event.getStream().getGameId()), event.getStream().getTitle());
                                 log(Level.FINE, discordId + " stream online due to twitch listener");
                             }
                         }
