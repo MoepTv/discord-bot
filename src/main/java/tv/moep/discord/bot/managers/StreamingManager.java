@@ -163,7 +163,7 @@ public class StreamingManager extends Manager {
                     // Test client
                     try {
                         List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList("The_Moep")).execute().getUsers();
-                        if (!userList.isEmpty()) {
+                        if (userList.isEmpty()) {
                             log(Level.WARNING, "Unable to query API?");
                         }
                     } catch (UnauthorizedException e) {
@@ -177,7 +177,14 @@ public class StreamingManager extends Manager {
                         String twitchName = (String) entry.getValue().unwrapped();
                         newListeners.put(twitchName.toLowerCase(), entry.getKey());
                         if (!listeners.containsKey(twitchName.toLowerCase())) {
-                            twitchClient.getClientHelper().enableStreamEventListener(twitchName);
+                            List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList(twitchName)).execute().getUsers();
+                            if (!userList.isEmpty()) {
+                                for (com.github.twitch4j.helix.domain.User user : userList) {
+                                    twitchClient.getClientHelper().enableStreamEventListener(user.getId(), user.getLogin());
+                                }
+                            } else {
+                                log(Level.WARNING, "Unable to register listener for " + twitchName + ". Channel was not found?");
+                            }
                         }
                     }
                 }
