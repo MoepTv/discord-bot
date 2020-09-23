@@ -89,7 +89,9 @@ public class DiscordSender implements CommandSender {
                     return true;
                 }
             case OPERATOR:
-                return message.getUserAuthor().isPresent() && message.getUserAuthor().get().isBotOwner();
+                return message.getUserAuthor().isPresent()
+                        && (message.getUserAuthor().get().isBotOwner()
+                                || bot.getConfig().getStringList("discord.operators").contains(message.getAuthor().getDiscriminatedName()));
         }
         return false;
     }
