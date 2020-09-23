@@ -35,6 +35,7 @@ public abstract class Manager {
         this.moepsBot = moepsBot;
         this.name = name;
         loadConfig();
+        MoepsBot.log(Level.INFO, "Manager " + name + " loaded!");
     }
 
     protected void loadConfig() {
@@ -112,5 +113,11 @@ public abstract class Manager {
 
     protected void log(Level level, String message) {
         MoepsBot.log(level, "[" + name + "] " + message);
+    }
+
+    protected void logDebug(String message) {
+        if (getMoepsBot().getConfig().getBoolean("debug")) {
+            MoepsBot.log(Level.INFO, "[" + name + "] [DEBUG] " + message);
+        }
     }
 }

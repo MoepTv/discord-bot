@@ -27,13 +27,15 @@ import com.github.philippheuer.events4j.simple.SimpleEventHandler;
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
-import com.github.twitch4j.common.exception.UnauthorizedException;
+import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
 import com.github.twitch4j.events.ChannelChangeGameEvent;
 import com.github.twitch4j.events.ChannelChangeTitleEvent;
 import com.github.twitch4j.events.ChannelGoLiveEvent;
 import com.github.twitch4j.events.ChannelGoOfflineEvent;
 import com.github.twitch4j.helix.domain.Game;
 import com.github.twitch4j.helix.domain.Video;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
@@ -57,6 +59,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,9 +73,10 @@ public class StreamingManager extends Manager {
     private String markerPrefix;
     private String markerSuffix;
     private String oAuthToken = "";
+    private String username = null;
     private TwitchClient twitchClient = null;
 
-    private Map<String, String> listeners = new HashMap<>();
+    private BiMap<String, String> listeners = HashBiMap.create();
 
     private LoadingCache<String, String> gameCache = Caffeine.newBuilder().build((gameId) -> {
             List<Game> games = twitchClient.getHelix().getGames(oAuthToken, Collections.singletonList(gameId), null).execute().getGames();
@@ -135,7 +139,8 @@ public class StreamingManager extends Manager {
             if (!config.isEmpty()) {
                 boolean setupTwitchClient = twitchClient == null;
                 if (setupTwitchClient) {
-                    TwitchClientBuilder twitchClientBuilder = TwitchClientBuilder.builder().withEnableHelix(true);
+                    TwitchClientBuilder twitchClientBuilder = TwitchClientBuilder.builder()
+                            .withEnableHelix(true);
                     String redirectUrl = getConfig().hasPath("twitch.client.redirecturl") ? getConfig().getString("twitch.client.redirecturl") : "";
                     if (getConfig().hasPath("twitch.client.oauth")) {
                         oAuthToken = getConfig().getString("twitch.client.oauth");
@@ -159,19 +164,29 @@ public class StreamingManager extends Manager {
                         log(Level.SEVERE, "No client ID/secret provided!");
                         return;
                     }
+                    if (getConfig().hasPath("twitch.client.username")) {
+                        twitchClientBuilder = twitchClientBuilder
+                                .withEnableChat(true)
+                                .withChatAccount(twitchClientBuilder.getDefaultAuthToken());
+                        username = getConfig().getString("twitch.client.username");
+                    }
                     twitchClient = twitchClientBuilder.build();
                     // Test client
                     try {
-                        List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList("The_Moep")).execute().getUsers();
+                        List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList("MoepsBot")).execute().getUsers();
                         if (userList.isEmpty()) {
                             log(Level.WARNING, "Unable to query API?");
+                        }
+                        if (username != null) {
+                            twitchClient.getChat().joinChannel("MoepsBot");
+                            twitchClient.getChat().sendMessage(username, "Testing " + MoepsBot.NAME + " " + MoepsBot.VERSION + " Twitch chat setup!");
                         }
                     } catch (Exception e) {
                         log(Level.SEVERE, "OAuth token might be invalid! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=");
                         throw e;
                     }
                 }
-                Map<String, String> newListeners = new HashMap<>();
+                BiMap<String, String> newListeners = HashBiMap.create();
                 for (Map.Entry<String, ConfigValue> entry : config.root().entrySet()) {
                     if (entry.getValue().valueType() == ConfigValueType.STRING) {
                         String twitchName = (String) entry.getValue().unwrapped();
@@ -221,10 +236,46 @@ public class StreamingManager extends Manager {
                             log(Level.FINE, discordId + " stream offline due to twitch listener");
                         }
                     });
+                    if (username != null) {
+                        SimpleEventHandler chatEventHandler = twitchClient.getChat().getEventManager().getEventHandler(SimpleEventHandler.class);
+                        chatEventHandler.onEvent(ChannelMessageEvent.class, event -> {
+                            if (listeners.containsKey(event.getChannel().getName().toLowerCase())) {
+                                String commandPrefix = getConfig().hasPath("twitch.commandprefix." + event.getMessageEvent().getChannel().getName().toLowerCase())
+                                        ? getConfig().getString("twitch.commandprefix." + event.getMessageEvent().getChannel().getName().toLowerCase())
+                                        : getConfig().hasPath("twitch.commandprefix.default")
+                                                ? getConfig().getString("twitch.commandprefix.default")
+                                                : "!";
+                                if (event.getMessage().startsWith(commandPrefix)) {
+                                    switch (event.getMessage().toLowerCase().substring(1)) {
+                                        case "group":
+                                        case "voice":
+                                        case "gruppe":
+                                            String discordId = listeners.get(event.getChannel().getName().toLowerCase());
+                                            User user = getMoepsBot().getUser(discordId);
+                                            Map<String, String> userInfos = new LinkedHashMap<>();
+                                            for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
+                                                if (getConfig(voiceChannel.getServer()) != null) {
+                                                    for (User connectedUser : voiceChannel.getConnectedUsers()) {
+                                                        String userInfo = connectedUser.getDisplayName(voiceChannel.getServer());
+                                                        if (listeners.containsValue(connectedUser.getDiscriminatedName())) {
+                                                            userInfo += " - https://twitch.tv/" + listeners.inverse().get(connectedUser.getDiscriminatedName());
+                                                        }
+                                                        userInfos.putIfAbsent(connectedUser.getDiscriminator(), userInfo);
+                                                    }
+                                                }
+                                            }
+                                            if (!userInfos.isEmpty()) {
+                                                event.getTwitchChat().sendMessage(event.getChannel().getName(), String.join(", ", userInfos.values()));
+                                            }
+                                            return;
+                                    }
+                                }
+                            }
+                        });
+                    }
                 }
             }
         }
-
 
         markChannel = getConfig().getBoolean("streaming-marker.enabled");
         markerPrefix = getConfig().getString("streaming-marker.prefix");
@@ -330,7 +381,9 @@ public class StreamingManager extends Manager {
             streamData.setTitle(title);
         }
 
+        String twitchChannel = null;
         if (streamingUrl != null) {
+            twitchChannel = getUserLogin(streamingUrl);
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
                 Config serverConfig = getConfig(server);
                 if (serverConfig != null && serverConfig.hasPath("announce")) {
@@ -371,6 +424,16 @@ public class StreamingManager extends Manager {
             }
         }
 
+        if (listeners.containsValue(rawName)) {
+            twitchChannel = listeners.inverse().get(rawName);
+        }
+
+        if (twitchChannel != null) {
+            twitchClient.getChat().joinChannel(twitchChannel);
+            logDebug("Joined " + twitchChannel + " Twitch channel");
+            logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));
+        }
+
         if (markChannel && user != null) {
             for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
                 markChannelName(voiceChannel);
@@ -390,7 +453,9 @@ public class StreamingManager extends Manager {
             log(Level.FINE, rawName + " stopped streaming " + (streamData != null ? streamData.getGame() + " " + streamData.getTitle() + " at " + streamData.getUrl() : ""));
         }
 
+        String twitchChannel = null;
         if (streamData != null && streamData.getUrl() != null) {
+            twitchChannel = getUserLogin(streamData.getUrl());
 
             String vodUrl = getVodUrl(streamData.getUrl(), streamData.getGameId());
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
@@ -423,11 +488,21 @@ public class StreamingManager extends Manager {
                 }
             }
         }
+
+        if (listeners.containsValue(rawName)) {
+            twitchChannel = listeners.inverse().get(rawName);
+        }
+
+        if (twitchChannel != null) {
+            twitchClient.getChat().leaveChannel(twitchChannel);
+            logDebug("Left " + twitchChannel + " Twitch channel");
+            logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));
+        }
     }
 
     private String getVodUrl(String streamUrl, String gameId) {
-        if (streamUrl.contains("twitch.com")) {
-            String userLogin = streamUrl.split("twitch.com/")[1];
+        String userLogin = getUserLogin(streamUrl);
+        if (userLogin != null) {
             List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList(userLogin)).execute().getUsers();
             if (!userList.isEmpty()) {
                 List<Video> videoList = twitchClient.getHelix().getVideos(oAuthToken, null, userList.get(0).getId(), gameId, null, "day", null, "archive", null, null, 1).execute().getVideos();
@@ -437,6 +512,11 @@ public class StreamingManager extends Manager {
             }
         }
         return streamUrl;
+    }
+
+    private String getUserLogin(String url) {
+        String[] parts = url.split("twitch.tv/");
+        return parts.length > 1 ? parts[1] : null;
     }
 
     private void updateNotificationMessage(Server server, String streamingUrl, String message) {
