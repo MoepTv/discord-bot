@@ -282,14 +282,26 @@ public class StreamingManager extends Manager {
         markerSuffix = getConfig().getString("streaming-marker.suffix");
 
         getMoepsBot().getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
-            if (markChannel && isStreaming(event.getUser())) {
-                markChannelName(event.getChannel());
+            StreamData streamData = getStreamData(event.getUser());
+            if (streamData != null) {
+                if (markChannel) {
+                    markChannelName(event.getChannel());
+                }
+                if (streamData.getUrl() != null) {
+                    joinTwitchChat(getUserLogin(streamData.getUrl()));
+                }
             }
         });
 
         getMoepsBot().getDiscordApi().addServerVoiceChannelMemberLeaveListener(event -> {
-            if (markChannel && isStreaming(event.getUser())) {
-                checkForMarkRemoval(event.getChannel());
+            StreamData streamData = getStreamData(event.getUser());
+            if (streamData != null) {
+                if (markChannel) {
+                    checkForMarkRemoval(event.getChannel());
+                }
+                if (streamData.getUrl() != null) {
+                    leaveTwitchChat(getUserLogin(streamData.getUrl()));
+                }
             }
         });
 
@@ -428,15 +440,12 @@ public class StreamingManager extends Manager {
             twitchChannel = listeners.inverse().get(rawName);
         }
 
-        if (twitchChannel != null) {
-            twitchClient.getChat().joinChannel(twitchChannel);
-            logDebug("Joined " + twitchChannel + " Twitch channel");
-            logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));
-        }
-
-        if (markChannel && user != null) {
+        if (user != null) {
             for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
-                markChannelName(voiceChannel);
+                if (markChannel) {
+                    markChannelName(voiceChannel);
+                }
+                joinTwitchChat(twitchChannel);
             }
         }
     }
@@ -493,11 +502,7 @@ public class StreamingManager extends Manager {
             twitchChannel = listeners.inverse().get(rawName);
         }
 
-        if (twitchChannel != null) {
-            twitchClient.getChat().leaveChannel(twitchChannel);
-            logDebug("Left " + twitchChannel + " Twitch channel");
-            logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));
-        }
+        leaveTwitchChat(twitchChannel);
     }
 
     private String getVodUrl(String streamUrl, String gameId) {
@@ -544,6 +549,22 @@ public class StreamingManager extends Manager {
             }
         });
 
+    }
+
+    private void joinTwitchChat(String twitchChannel) {
+        if (twitchChannel != null && !twitchClient.getChat().getCurrentChannels().contains(twitchChannel)) {
+            twitchClient.getChat().joinChannel(twitchChannel);
+            logDebug("Joined " + twitchChannel + " Twitch channel");
+            logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));
+        }
+    }
+
+    private void leaveTwitchChat(String twitchChannel) {
+        if (twitchChannel != null ) {
+            twitchClient.getChat().leaveChannel(twitchChannel);
+            logDebug("Left " + twitchChannel + " Twitch channel");
+            logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));
+        }
     }
 
     private void checkForMarkRemoval(ServerVoiceChannel voiceChannel) {
