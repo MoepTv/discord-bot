@@ -18,8 +18,10 @@ package tv.moep.discord.bot.managers;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
+import com.google.common.collect.Table;
 import com.typesafe.config.Config;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
@@ -29,18 +31,19 @@ import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class InviteManager extends Manager {
-    private Map<Long, Map<String, Integer>> inviteCounts = new ConcurrentHashMap<>();
+    private Table<Long, String, Integer> inviteCounts = HashBasedTable.create();
     private Multimap<Long, String> dynamicRoles = MultimapBuilder.hashKeys().hashSetValues().build();
+    private Map<Long, String> widgetRoles = new HashMap<>();
 
     public InviteManager(MoepsBot moepsBot) {
         super(moepsBot, "invites");
@@ -49,15 +52,17 @@ public class InviteManager extends Manager {
             Config serverConfig = getConfig(server);
             if (serverConfig != null) {
                 dynamicRoles.putAll(server.getId(), Utils.getList(serverConfig, "dynamicRoles"));
+                widgetRoles.put(server.getId(), serverConfig.getString("widgetRole"));
             }
         }
 
         checkForNewInvites();
 
         moepsBot.getDiscordApi().addServerMemberJoinListener(event -> {
-            Map<String, Integer> inviteMap = inviteCounts.get(event.getServer().getId());
+            Map<String, Integer> inviteMap = inviteCounts.row(event.getServer().getId());
             if (inviteMap != null) {
                 event.getServer().getInvites().thenAccept(invites -> {
+                    log(Level.FINE, "Checking " + invites.size() + " invites of " + event.getServer().getName() + "/" + event.getServer().getId());
                     RichInvite foundInvite = null;
                     for (RichInvite invite : invites) {
                         if (inviteMap.containsKey(invite.getCode())) {
@@ -99,22 +104,26 @@ public class InviteManager extends Manager {
     private void checkForNewInvites() {
         for (Server server : getMoepsBot().getDiscordApi().getServers()) {
             if (getConfig(server) != null) {
-                Map<String, Integer> inviteMap = inviteCounts.computeIfAbsent(server.getId(), id -> new ConcurrentHashMap<>());
+                logDebug("Checking invites of " +  server.getName() + "/" + server.getId());
+                Map<String, Integer> inviteMap = inviteCounts.row(server.getId());
                 try {
                     for (RichInvite invite : server.getInvites().get()) {
+                        logDebug("Found invite " + invite.getCode() + " " + invite.getUses() + "/" + invite.getMaxUses() + " " + invite.getMaxAgeInSeconds() + " " + (invite.getInviter() != null ? invite.getInviter().getDiscriminatedName() : "null"));
                         if (isValid(invite)) {
                             inviteMap.putIfAbsent(invite.getCode(), invite.getUses());
+                        } else {
+                            logDebug("Invite is not valid!");
                         }
                     }
                 } catch (InterruptedException | ExecutionException e) {
-                    log(Level.SEVERE, "Could not get invites for server " + server.getName() + "/" + server.getId() + "! " + e.getMessage());
+                    logDebug("Could not get invites for server " + server.getName() + "/" + server.getId() + "! " + e.getMessage());
                 }
             }
         }
     }
 
     private void handleInvite(User user, RichInvite invite, Server server) {
-        log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + invite.getInviter().getDiscriminatedName());
+        log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + (invite.getInviter() != null ? invite.getInviter().getDiscriminatedName() : "null"));
 
         List<String> inviteRoles = Utils.getList(getConfig(), server.getId() + ".inviteRoles." + invite.getCode());
         for (String inviteRole : inviteRoles) {
@@ -127,12 +136,16 @@ public class InviteManager extends Manager {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             Role addRole = null;
-            for (Role role : invite.getInviter().getRoles(server)) {
-                for (Role availableRole : availableRoles) {
-                    if (availableRole.getPosition() <= role.getPosition() && (addRole == null || addRole.getPosition() < availableRole.getPosition())) {
-                        addRole = availableRole;
+            if (invite.getInviter() != null) {
+                for (Role role : invite.getInviter().getRoles(server)) {
+                    for (Role availableRole : availableRoles) {
+                        if (availableRole.getPosition() <= role.getPosition() && (addRole == null || addRole.getPosition() < availableRole.getPosition())) {
+                            addRole = availableRole;
+                        }
                     }
                 }
+            } else if (widgetRoles.containsKey(server.getId())) {
+                addRole = server.getRoleById(widgetRoles.get(server.getId())).orElse(null);
             }
             if (addRole != null) {
                 user.addRole(addRole);

@@ -6,7 +6,7 @@
 
     <groupId>tv.moep.discord</groupId>
     <artifactId>bot</artifactId>
-    <version>1.6-SNAPSHOT</version>
+    <version>1.6.1-SNAPSHOT</version>
     <name>MoepsBot</name>
 
     <description>Bot for the Moep.tv discord guild</description>
