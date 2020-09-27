@@ -52,7 +52,9 @@ public class InviteManager extends Manager {
             Config serverConfig = getConfig(server);
             if (serverConfig != null) {
                 dynamicRoles.putAll(server.getId(), Utils.getList(serverConfig, "dynamicRoles"));
-                widgetRoles.put(server.getId(), serverConfig.getString("widgetRole"));
+                if (serverConfig.hasPath("widgetRole")) {
+                    widgetRoles.put(server.getId(), serverConfig.getString("widgetRole"));
+                }
             }
         }
 
