@@ -46,13 +46,16 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -120,16 +123,14 @@ public class MoepsBot {
         });
         registerCommand("stop", Permission.OPERATOR, (sender, args) -> {
             sender.sendMessage("Stopping " + NAME + " v" + VERSION);
-            try {
-                getDiscordApi().getOwner().get().sendMessage("Shutdown triggered by " + sender.getName() + " (" + NAME + " v" + VERSION + ")").get();
-            } catch (InterruptedException | ExecutionException ignored) {}
+            notifyOperators("Shutdown triggered by " + sender.getName() + " (" + NAME + " v" + VERSION + ")");
             synchronized (MoepsBot.this) {
                 this.notifyAll();
             }
             return true;
         });
         registerCommand(new ListCommand(this));
-        getDiscordApi().getOwner().thenAccept(owner -> owner.sendMessage("Started " + NAME + " v" + VERSION));
+        notifyOperators("Started " + NAME + " v" + VERSION);
         synchronized (MoepsBot.this) {
             try {
                 wait();
@@ -142,6 +143,19 @@ public class MoepsBot {
         }
         log(Level.INFO, "Bye!");
         System.exit(0);
+    }
+
+    private void notifyOperators(String message) {
+        List<CompletableFuture<User>> operators = new ArrayList<>();
+        operators.add(getDiscordApi().getOwner());
+        for (String id : getConfig().getStringList("discord.operators")) {
+            operators.add(getDiscordApi().getUserById(id));
+        }
+        for (CompletableFuture<User> future : operators) {
+            try {
+                future.get().sendMessage(message).get();
+            } catch (InterruptedException | ExecutionException ignored) {}
+        }
     }
 
     private void loadConfig() {
