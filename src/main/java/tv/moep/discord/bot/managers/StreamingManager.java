@@ -463,37 +463,39 @@ public class StreamingManager extends Manager {
         }
 
         String twitchChannel = null;
+        String vodUrl = null;
         if (streamData != null && streamData.getUrl() != null) {
             twitchChannel = getUserLogin(streamData.getUrl());
 
-            String vodUrl = getVodUrl(streamData.getUrl(), streamData.getGameId());
-            for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
-                Config serverConfig = getConfig(server);
-                if (serverConfig != null && serverConfig.hasPath("announce")) {
-                    ServerData serverData = getServerData(server);
-                    serverData.getLiveUsers().remove(rawName.toLowerCase());
-                    if (serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
-                        String newMessage = Utils.replace(
-                                serverConfig.getString("announce.offline"),
-                                "username", user != null ? user.getDisplayName(server) : rawName,
-                                "game", streamData.getGame(),
-                                "title", streamData.getTitle(),
-                                "url", streamData.getUrl(),
-                                "vodurl", vodUrl
-                        );
-                        updateNotificationMessage(server, streamData.getUrl(), newMessage);
-                    }
-                    if (serverData.getLiveUsers().isEmpty() && serverConfig.hasPath("announce.icon.live")) {
-                        if (serverConfig.hasPath("announce.icon.offline")) {
-                            try {
-                                server.updateIcon(new URL(serverConfig.getString("announce.icon.offline")));
-                            } catch (MalformedURLException e) {
-                                server.updateIcon(serverData.getIcon());
-                                e.printStackTrace();
-                            }
-                        } else if (serverData.getIcon() != null) {
+            vodUrl = getVodUrl(streamData.getUrl(), streamData.getGameId());
+        }
+
+        for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
+            Config serverConfig = getConfig(server);
+            if (serverConfig != null && serverConfig.hasPath("announce")) {
+                ServerData serverData = getServerData(server);
+                serverData.getLiveUsers().remove(rawName.toLowerCase());
+                if (streamData != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
+                    String newMessage = Utils.replace(
+                            serverConfig.getString("announce.offline"),
+                            "username", user != null ? user.getDisplayName(server) : rawName,
+                            "game", streamData.getGame(),
+                            "title", streamData.getTitle(),
+                            "url", streamData.getUrl(),
+                            "vodurl", vodUrl
+                    );
+                    updateNotificationMessage(server, streamData.getUrl(), newMessage);
+                }
+                if (serverData.getLiveUsers().isEmpty() && serverConfig.hasPath("announce.icon.live")) {
+                    if (serverConfig.hasPath("announce.icon.offline")) {
+                        try {
+                            server.updateIcon(new URL(serverConfig.getString("announce.icon.offline")));
+                        } catch (MalformedURLException e) {
                             server.updateIcon(serverData.getIcon());
+                            e.printStackTrace();
                         }
+                    } else if (serverData.getIcon() != null) {
+                        server.updateIcon(serverData.getIcon());
                     }
                 }
             }
