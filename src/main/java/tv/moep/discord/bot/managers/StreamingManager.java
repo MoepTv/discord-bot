@@ -488,6 +488,7 @@ public class StreamingManager extends Manager {
                             try {
                                 server.updateIcon(new URL(serverConfig.getString("announce.icon.offline")));
                             } catch (MalformedURLException e) {
+                                server.updateIcon(serverData.getIcon());
                                 e.printStackTrace();
                             }
                         } else if (serverData.getIcon() != null) {
