@@ -64,7 +64,7 @@ public class RoleManager extends Manager {
                     event.getServer().get()
                             .getRoleById(config.getLong(path))
                             .ifPresent(r -> event.getUser().addRole(r)
-                                    .thenAccept(a -> logDebug("[Reaction] Added role " + r.getName() + " to " + event.getUser().getMentionTag())));
+                                    .thenAccept(a -> logDebug("[Reaction] Added role " + r.getName() + " to " + event.getUser().getDiscriminatedName())));
                 }
             }
         });
@@ -77,7 +77,7 @@ public class RoleManager extends Manager {
                     event.getServer().get()
                             .getRoleById(config.getLong(path))
                             .ifPresent(r -> event.getUser().removeRole(r)
-                                    .thenAccept(a -> logDebug("[Reaction] Removed role " + r.getName() + " from " + event.getUser().getMentionTag())));
+                                    .thenAccept(a -> logDebug("[Reaction] Removed role " + r.getName() + " from " + event.getUser().getDiscriminatedName())));
                 }
             }
         });
@@ -153,7 +153,7 @@ public class RoleManager extends Manager {
         if (type != null && serverConfig.hasPath("dynamicPrefix." + type.name().toLowerCase())) {
             for (Role role : server.getRolesByNameIgnoreCase(serverConfig.getString("dynamicPrefix." + type.name().toLowerCase()) + name)) {
                 r = true;
-                user.addRole(role).thenAccept(a -> logDebug("[Activity-Dynamic] Added role " + role.getName() + " to " + user.getMentionTag()));
+                user.addRole(role).thenAccept(a -> logDebug("[Activity-Dynamic] Added role " + role.getName() + " to " + user.getDiscriminatedName()));
             }
         }
         for (String roleId : serverConfig.root().keySet()) {
@@ -174,11 +174,11 @@ public class RoleManager extends Manager {
 
                 if (matches) {
                     if (!user.getRoles(server).contains(role.get())) {
-                        user.addRole(role.get()).thenAccept(a -> logDebug("[Activity] Added role " + role.get().getName() + " to " + user.getMentionTag()));
+                        user.addRole(role.get()).thenAccept(a -> logDebug("[Activity] Added role " + role.get().getName() + " to " + user.getDiscriminatedName()));
                     }
                     r = true;
                 } else if (roleConfig.getBoolean("temporary") && user.getRoles(server).contains(role.get())) {
-                    user.removeRole(role.get()).thenAccept(a -> logDebug("[Activity] Removed temporary role " + role.get().getName() + " from " + user.getMentionTag()));
+                    user.removeRole(role.get()).thenAccept(a -> logDebug("[Activity] Removed temporary role " + role.get().getName() + " from " + user.getDiscriminatedName()));
                 }
             }
         }
