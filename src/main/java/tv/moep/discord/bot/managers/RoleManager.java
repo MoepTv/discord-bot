@@ -56,6 +56,30 @@ public class RoleManager extends Manager {
             }
         }
 
+        moepsBot.getDiscordApi().addReactionAddListener(event -> {
+            if (event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
+                Config config = getConfig(event.getServer().get());
+                String path = "reactions." + event.getMessageId() + "." + event.getEmoji().asCustomEmoji().get().getName();
+                if (config != null && config.hasPath(path)) {
+                    event.getServer().get()
+                            .getRoleById(config.getLong(path))
+                            .ifPresent(r -> event.getUser().addRole(r));
+                }
+            }
+        });
+
+        moepsBot.getDiscordApi().addReactionRemoveListener(event -> {
+            if (event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
+                Config config = getConfig(event.getServer().get());
+                String path = "reactions." + event.getMessageId() + "." + event.getEmoji().asCustomEmoji().get().getName();
+                if (config != null && config.hasPath(path)) {
+                    event.getServer().get()
+                            .getRoleById(config.getLong(path))
+                            .ifPresent(r -> event.getUser().removeRole(r));
+                }
+            }
+        });
+
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
             updateRoles(event.getUser(), event.getNewActivity().orElse(null));
         });
