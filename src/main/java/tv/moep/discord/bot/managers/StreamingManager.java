@@ -254,6 +254,7 @@ public class StreamingManager extends Manager {
                                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                                             User user = getMoepsBot().getUser(discordId);
                                             Map<String, String> userInfos = new LinkedHashMap<>();
+                                            logDebug("Executing command " + event.getMessage() + " in " + event.getChannel().getName() + " with " + discordId + "/" + (user != null ? user.getDiscriminatedName() : "null"));
                                             for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
                                                 if (getConfig(voiceChannel.getServer()) != null) {
                                                     for (User connectedUser : voiceChannel.getConnectedUsers()) {
@@ -312,7 +313,7 @@ public class StreamingManager extends Manager {
                         event.getUser(),
                         event.getUser().getDiscriminatedName(),
                         event.getNewActivity().get().getStreamingUrl().orElse(null),
-                        null,
+                        getGameId(event.getNewActivity().get().getName()),
                         event.getNewActivity().get().getName(),
                         event.getNewActivity().get().getDetails().orElse("")
                 );
@@ -347,14 +348,15 @@ public class StreamingManager extends Manager {
     private void updateTitle(User user, String rawName, String title) {
         StreamData streamData = getStreamData(rawName);
         streamData.setTitle(title);
-        log(Level.FINE, rawName + " changed title to " + title);
+        logDebug(rawName + " changed title to " + title);
         updateNotification(user, rawName, streamData);
     }
 
     private void updateGame(User user, String rawName, String game) {
         StreamData streamData = getStreamData(rawName);
         streamData.setGame(game);
-        log(Level.FINE, rawName + " changed game to " + game);
+        streamData.setGameId(getGameId(game));
+        logDebug(rawName + " changed game to " + streamData.getGame() + "/" + streamData.getGameId());
         updateNotification(user, rawName, streamData);
     }
 
@@ -376,6 +378,22 @@ public class StreamingManager extends Manager {
         return gameCache.get(gameId);
     }
 
+    private String getGameId(String game) {
+        for (Map.Entry<String, String> entry : gameCache.asMap().entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(game)) {
+                return entry.getKey();
+            }
+        }
+        List<Game> games = twitchClient.getHelix().getGames(oAuthToken, null, Collections.singletonList(game)).execute().getGames();
+        if (!games.isEmpty()) {
+            for (Game g : games) {
+                gameCache.put(g.getId(), g.getName());
+            }
+            return games.get(0).getId();
+        }
+        return null;
+    }
+
     private void onLive(User user, String rawName, String streamingUrl, String gameId, String game, String title) {
         StreamData streamData;
         if (user != null) {
@@ -391,6 +409,7 @@ public class StreamingManager extends Manager {
             streams.put(rawName.toLowerCase(), new StreamData(streamingUrl, gameId, game, title));
         } else {
             streamData.setGame(game);
+            streamData.setGameId(gameId);
             streamData.setTitle(title);
         }
 
@@ -515,9 +534,11 @@ public class StreamingManager extends Manager {
         String userLogin = getUserLogin(streamUrl);
         if (userLogin != null) {
             List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList(userLogin)).execute().getUsers();
+            logDebug("Getting VOD of " + userLogin + " (" + userList.size() + ")");
             if (!userList.isEmpty()) {
                 List<Video> videoList = twitchClient.getHelix().getVideos(oAuthToken, null, userList.get(0).getId(), gameId, null, "day", null, "archive", null, null, 1).execute().getVideos();
                 if (!videoList.isEmpty()) {
+                    logDebug("Found vod " + videoList.get(0).getUrl() );
                     return videoList.get(0).getUrl();
                 }
             }
