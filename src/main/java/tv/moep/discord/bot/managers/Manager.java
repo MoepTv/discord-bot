@@ -116,8 +116,8 @@ public abstract class Manager {
     }
 
     protected void logDebug(String message) {
-        if (getMoepsBot().getConfig().getBoolean("debug")) {
-            MoepsBot.log(Level.INFO, "[" + name + "] [DEBUG] " + message);
+        if (getConfig().getBoolean("debug")) {
+            log(Level.INFO, "[DEBUG] " + message);
         }
     }
 }
