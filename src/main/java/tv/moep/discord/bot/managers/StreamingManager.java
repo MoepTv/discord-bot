@@ -41,6 +41,7 @@ import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.apache.commons.lang.WordUtils;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
@@ -409,6 +410,7 @@ public class StreamingManager extends Manager {
                     if (serverConfig.hasPath("announce.channel")) {
                         String message = Utils.replace(
                                 serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%",
+                                "streamname", twitchChannel != null ? twitchChannel : user != null ? user.getDisplayName(server) : rawName,
                                 "username", user != null ? user.getDisplayName(server) : rawName,
                                 "game", game,
                                 "title", title,
@@ -478,6 +480,7 @@ public class StreamingManager extends Manager {
                 if (streamData != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
                     String newMessage = Utils.replace(
                             serverConfig.getString("announce.offline"),
+                            "streamname", twitchChannel != null ? twitchChannel : user != null ? user.getDisplayName(server) : rawName,
                             "username", user != null ? user.getDisplayName(server) : rawName,
                             "game", streamData.getGame(),
                             "title", streamData.getTitle(),
@@ -524,7 +527,7 @@ public class StreamingManager extends Manager {
 
     private String getUserLogin(String url) {
         String[] parts = url.split("twitch.tv/");
-        return parts.length > 1 ? parts[1] : null;
+        return parts.length > 1 ? WordUtils.capitalize(parts[1], new char[]{'_', '-'}) : null;
     }
 
     private void updateNotificationMessage(Server server, String streamingUrl, String message) {
