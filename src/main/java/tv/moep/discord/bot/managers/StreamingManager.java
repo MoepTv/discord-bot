@@ -506,18 +506,23 @@ public class StreamingManager extends Manager {
                             "url", streamData.getUrl(),
                             "vodurl", vodUrl
                     );
+                    logDebug("Setting announce message to: " + newMessage);
                     updateNotificationMessage(server, streamData.getUrl(), newMessage);
                 }
                 if (serverData.getLiveUsers().isEmpty() && serverConfig.hasPath("announce.icon.live")) {
                     if (serverConfig.hasPath("announce.icon.offline")) {
                         try {
+                            logDebug("Updating icon to configured offline icon " + serverConfig.getString("announce.icon.offline"));
                             server.updateIcon(new URL(serverConfig.getString("announce.icon.offline")));
                         } catch (MalformedURLException e) {
                             server.updateIcon(serverData.getIcon());
                             e.printStackTrace();
                         }
                     } else if (serverData.getIcon() != null) {
+                        logDebug("Updating icon to cached icon " + serverData.getIcon());
                         server.updateIcon(serverData.getIcon());
+                    } else {
+                        log(Level.WARNING, "Live icon defined but no configured or cached offline icon found! Cannot reset server icon!");
                     }
                 }
             }
