@@ -82,7 +82,7 @@ public class VoiceChannelManager extends Manager {
                 Optional<ServerVoiceChannel> voiceChannel = sender.getUser().getConnectedVoiceChannel(sender.getServer());
                 if (voiceChannel.isPresent()) {
                     moveRequests.put(sender.getUser().getId(), voiceChannel.get());
-                    sender.sendMessage("Voice channel move request valid for 1 minute!");
+                    sender.sendMessage("Voice channel move request from " + voiceChannel.get().getName() + " valid for 1 minute!");
                 } else {
                     sender.sendMessage("You are not connected to a voice channel in this server?");
                 }
