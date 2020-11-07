@@ -230,8 +230,8 @@ public class MoepsBot {
         }
     }
 
-    public <T extends CommandSender> Command<T> registerCommand(String usage, Permission permission, BiFunction<T, String[], Boolean> execute) {
-        return registerCommand(new Command<T>(usage, permission) {
+    public <T extends CommandSender> Command<T> registerCommand(String usage, Permission permission, BiFunction<T, String[], Boolean> execute, String... aliases) {
+        return registerCommand(new Command<T>(usage, permission, aliases) {
             @Override
             public boolean execute(T sender, String[] args) {
                 return execute.apply(sender, args);

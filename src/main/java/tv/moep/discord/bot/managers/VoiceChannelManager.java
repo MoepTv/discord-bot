@@ -18,6 +18,8 @@ package tv.moep.discord.bot.managers;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
@@ -26,21 +28,41 @@ import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.Permission;
 import tv.moep.discord.bot.Utils;
+import tv.moep.discord.bot.commands.Command;
+import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class VoiceChannelManager extends Manager {
+
+    private Cache<Long, ServerVoiceChannel> moveRequests = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
 
     public VoiceChannelManager(MoepsBot moepsBot) {
         super(moepsBot, "voice-channel");
 
         moepsBot.getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
             User user = event.getUser();
+            ServerVoiceChannel voiceChannel = event.getChannel();
             if (user.getActivity().isPresent() && user.getActivity().get().getType() == ActivityType.PLAYING) {
-                checkForMove(user, user.getActivity().get(), event.getChannel());
+                Optional<ServerVoiceChannel> newVoice = checkForMove(user, user.getActivity().get(), event.getChannel());
+                if (newVoice.isPresent()) {
+                    voiceChannel = newVoice.get();
+                }
+            }
+
+            ServerVoiceChannel moveChannel = moveRequests.getIfPresent(user.getId());
+            if (moveChannel != null) {
+                for (User connectedUser : moveChannel.getConnectedUsers()) {
+                    if (!connectedUser.isConnected(voiceChannel)) {
+                        connectedUser.move(voiceChannel);
+                    }
+                }
+                moveRequests.invalidate(user.getId());
             }
         });
 
@@ -52,6 +74,21 @@ public class VoiceChannelManager extends Manager {
                 }
             }
         });
+
+        Command<DiscordSender> moveCommand = moepsBot.registerCommand("move", Permission.USER, (sender, args) -> {
+            Config serverConfig = getConfig(sender.getServer());
+            if (serverConfig != null && serverConfig.hasPath("moveRoles")
+                    && Utils.hasRole(sender.getUser(), sender.getServer(), serverConfig.getStringList("moveRoles"))) {
+                Optional<ServerVoiceChannel> voiceChannel = sender.getUser().getConnectedVoiceChannel(sender.getServer());
+                if (voiceChannel.isPresent()) {
+                    moveRequests.put(sender.getUser().getId(), voiceChannel.get());
+                    sender.sendMessage("Voice channel move request valid for 1 minute!");
+                } else {
+                    sender.sendMessage("You are not connected to a voice channel in this server?");
+                }
+            }
+            return true;
+        }, "mv");
     }
 
     /**
