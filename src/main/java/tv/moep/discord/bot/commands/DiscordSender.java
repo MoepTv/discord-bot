@@ -29,7 +29,7 @@ import tv.moep.discord.bot.Utils;
 
 import java.util.concurrent.CompletableFuture;
 
-public class DiscordSender implements CommandSender {
+public class DiscordSender implements CommandSender<Message> {
     private final MoepsBot bot;
     private final Message message;
 
@@ -39,12 +39,12 @@ public class DiscordSender implements CommandSender {
     }
 
     @Override
-    public void sendNaturalMessage(String message) {
-        this.message.getChannel().sendMessage(message);
+    public CompletableFuture<Message> sendNaturalMessage(String message) {
+        return this.message.getChannel().sendMessage(message);
     }
 
     @Override
-    public void sendMessage(String message) {
+    public CompletableFuture<Message> sendMessage(String message) {
         CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(new EmbedBuilder()
                 .setTitle(message)
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
@@ -54,10 +54,11 @@ public class DiscordSender implements CommandSender {
                 || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
             messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
         }
+        return messageFuture;
     }
 
     @Override
-    public void sendMessage(String title, String message) {
+    public CompletableFuture<Message> sendMessage(String title, String message) {
         CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(new EmbedBuilder()
                 .setAuthor(this.message.getApi().getYourself())
                 .setTitle(title)
@@ -69,6 +70,7 @@ public class DiscordSender implements CommandSender {
                 || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
             messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
         }
+        return messageFuture;
     }
 
     @Override
@@ -117,5 +119,9 @@ public class DiscordSender implements CommandSender {
     @Override
     public String getName() {
         return message.getAuthor().getDisplayName();
+    }
+
+    public Message getMessage() {
+        return message;
     }
 }

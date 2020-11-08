@@ -20,12 +20,14 @@ package tv.moep.discord.bot.commands;
 
 import tv.moep.discord.bot.Permission;
 
-public interface CommandSender {
-    void sendNaturalMessage(String message);
+import java.util.concurrent.CompletableFuture;
 
-    void sendMessage(String message);
+public interface CommandSender<M> {
+    CompletableFuture<M> sendNaturalMessage(String message);
 
-    void sendMessage(String title, String message);
+    CompletableFuture<M> sendMessage(String message);
+
+    CompletableFuture<M> sendMessage(String title, String message);
 
     boolean hasPermission(Permission permission);
 

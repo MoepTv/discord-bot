@@ -26,21 +26,25 @@ import com.typesafe.config.ConfigValueType;
 import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
+import org.javacord.api.entity.message.Message;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Permission;
 import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.DiscordSender;
+import tv.moep.discord.bot.commands.MessageReaction;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class VoiceChannelManager extends Manager {
 
-    private Cache<Long, ServerVoiceChannel> moveRequests = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
+    private Cache<Long, MoveRequest> moveRequests = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
 
     public VoiceChannelManager(MoepsBot moepsBot) {
         super(moepsBot, "voice-channel");
@@ -55,14 +59,26 @@ public class VoiceChannelManager extends Manager {
                 }
             }
 
-            ServerVoiceChannel moveChannel = moveRequests.getIfPresent(user.getId());
-            if (moveChannel != null) {
-                for (User connectedUser : moveChannel.getConnectedUsers()) {
+            MoveRequest moveRequest = moveRequests.getIfPresent(user.getId());
+            if (moveRequest != null) {
+                moveRequests.invalidate(user.getId());
+                int amount = 0;
+                for (User connectedUser : moveRequest.getVoiceChannel().getConnectedUsers()) {
                     if (!connectedUser.isConnected(voiceChannel)) {
                         connectedUser.move(voiceChannel);
+                        amount++;
                     }
                 }
-                moveRequests.invalidate(user.getId());
+                moveRequest.getCommandMessage().delete();
+                int finalAmount = amount;
+                ServerVoiceChannel finalVoiceChannel = voiceChannel;
+                moveRequest.getAnswerFuture().thenAccept(m -> {
+                    m.edit(new EmbedBuilder()
+                            .setTitle("Moved " + finalAmount + " users to " + finalVoiceChannel.getName())
+                            .setFooter("Answer to " + event.getUser().getDiscriminatedName())
+                            .setColor(m.getEmbeds().isEmpty() ? Utils.getRandomColor() : m.getEmbeds().get(0).getColor().orElse(Utils.getRandomColor())));
+                    m.addReaction(MessageReaction.CONFIRM);
+                });
             }
         });
 
@@ -81,9 +97,13 @@ public class VoiceChannelManager extends Manager {
                     && Utils.hasRole(sender.getUser(), sender.getServer(), serverConfig.getStringList("moveRoles"))) {
                 Optional<ServerVoiceChannel> voiceChannel = sender.getUser().getConnectedVoiceChannel(sender.getServer());
                 if (voiceChannel.isPresent()) {
-                    moveRequests.put(sender.getUser().getId(), voiceChannel.get());
-                    sender.sendMessage("Voice channel move request from " + voiceChannel.get().getName() + " valid for 1 minute!");
+                    moveRequests.put(sender.getUser().getId(), new MoveRequest(
+                            voiceChannel.get(),
+                            sender.getMessage(),
+                            sender.sendMessage("Voice channel move request from " + voiceChannel.get().getName() + " valid for 1 minute!")
+                    ));
                 } else {
+                    sender.getMessage().delete();
                     sender.sendMessage("You are not connected to a voice channel in this server?");
                 }
             }
@@ -129,5 +149,29 @@ public class VoiceChannelManager extends Manager {
             }
         }
         return Optional.empty();
+    }
+
+    private class MoveRequest {
+        private final ServerVoiceChannel voiceChannel;
+        private final Message commandMessage;
+        private final CompletableFuture<Message> answerFuture;
+
+        private MoveRequest(ServerVoiceChannel voiceChannel, Message commandMessage, CompletableFuture<Message> answerFuture) {
+            this.voiceChannel = voiceChannel;
+            this.commandMessage = commandMessage;
+            this.answerFuture = answerFuture;
+        }
+
+        public ServerVoiceChannel getVoiceChannel() {
+            return voiceChannel;
+        }
+
+        public Message getCommandMessage() {
+            return commandMessage;
+        }
+
+        public CompletableFuture<Message> getAnswerFuture() {
+            return answerFuture;
+        }
     }
 }
