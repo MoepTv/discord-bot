@@ -495,6 +495,7 @@ public class StreamingManager extends Manager {
             Config serverConfig = getConfig(server);
             if (serverConfig != null && serverConfig.hasPath("announce")) {
                 ServerData serverData = getServerData(server);
+                logDebug("Currently live: " + String.join(", ", serverData.getLiveUsers()));
                 serverData.getLiveUsers().remove(rawName.toLowerCase());
                 if (streamData != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
                     String newMessage = Utils.replace(
