@@ -1,8 +1,8 @@
 package tv.moep.discord.bot;
 
 /*
- * discordbot
- * Copyright (C) 2018 Max Lee aka Phoenix616 (mail@moep.tv)
+ * MoepTv - bot
+ * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
