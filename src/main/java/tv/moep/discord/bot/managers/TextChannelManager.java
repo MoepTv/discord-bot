@@ -23,6 +23,7 @@ import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
 import tv.moep.discord.bot.MoepsBot;
+import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.time.Instant;
@@ -64,6 +65,19 @@ public class TextChannelManager extends Manager {
                 if (message.startsWith(commandPrefix)) {
                     moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), message.substring(commandPrefix.length()).trim());
                 }
+            }
+
+            if (has(event.getServerTextChannel().get(), "pasteFiles")) {
+                    Utils.uploadToPaste(event.getMessage(), event.getMessage().getAttachments()).thenAccept(paste -> {
+                        if (paste != null) {
+                            event.getServerTextChannel().get().sendMessage("Paste: <" + paste.getLink() + ">").thenAccept(m -> {
+                                event.getMessage().addMessageDeleteListener(event1 -> {
+                                    m.delete("Original paste message deleted");
+                                    Utils.deletePaste(paste);
+                                });
+                            });
+                        }
+                    });
             }
 
             checkForDeletion(event.getServerTextChannel().get(), event.getMessage());

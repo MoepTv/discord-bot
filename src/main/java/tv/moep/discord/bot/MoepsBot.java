@@ -141,6 +141,7 @@ public class MoepsBot {
                 wait(1000);
             } catch (InterruptedException ignored) { }
         }
+        Utils.shutdown();
         log(Level.INFO, "Bye!");
         System.exit(0);
     }
