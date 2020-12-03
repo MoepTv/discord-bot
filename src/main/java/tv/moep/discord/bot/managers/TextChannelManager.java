@@ -28,6 +28,7 @@ import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
@@ -56,6 +57,8 @@ public class TextChannelManager extends Manager {
                 return;
             }
 
+            boolean foundCommand = false;
+
             if (has(event.getServerTextChannel().get(), "commands")) {
                 String message = event.getMessageContent();
                 if (moepsBot.getConfig().getBoolean("debug")) {
@@ -63,7 +66,7 @@ public class TextChannelManager extends Manager {
                 }
                 String commandPrefix = getString(event.getServerTextChannel().get(), "command-prefix", "!");
                 if (message.startsWith(commandPrefix)) {
-                    moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), message.substring(commandPrefix.length()).trim());
+                    foundCommand = moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), message.substring(commandPrefix.length()).trim());
                 }
             }
 
@@ -78,6 +81,14 @@ public class TextChannelManager extends Manager {
                             });
                         }
                     });
+            }
+
+            if (!foundCommand && event.getMessageAuthor().isRegularUser()) {
+                String command = event.getMessageContent().split(" ")[0].toLowerCase(Locale.ROOT);
+                String reply = getString(event.getServerTextChannel().get(), "factoids.\"" + command + "\"", null);
+                if (reply != null) {
+                    event.getServerTextChannel().get().sendMessage(reply);
+                }
             }
 
             checkForDeletion(event.getServerTextChannel().get(), event.getMessage());
