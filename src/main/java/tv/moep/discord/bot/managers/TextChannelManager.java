@@ -83,7 +83,7 @@ public class TextChannelManager extends Manager {
                     });
             }
 
-            if (!foundCommand && event.getMessageAuthor().isRegularUser()) {
+            if (!foundCommand) {
                 String command = event.getMessageContent().split(" ")[0].toLowerCase(Locale.ROOT);
                 String reply = getString(event.getServerTextChannel().get(), "factoids.\"" + command + "\"", null);
                 if (reply != null) {
