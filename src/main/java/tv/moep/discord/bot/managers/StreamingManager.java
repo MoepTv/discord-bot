@@ -363,8 +363,10 @@ public class StreamingManager extends Manager {
     private void updateNotification(User user, String rawName, StreamData streamData) {
         for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
             Config serverConfig = getConfig(server);
+            String twitchChannel = getUserLogin(streamData.getUrl());
             String newMessage = Utils.replace(
                     serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%",
+                    "streamname", twitchChannel != null ? twitchChannel : user != null ? user.getDisplayName(server) : rawName,
                     "username", user != null ? user.getDisplayName(server) : rawName,
                     "game", streamData.getGame(),
                     "title", streamData.getTitle(),
