@@ -419,18 +419,18 @@ public class StreamingManager extends Manager {
         if (streamingUrl != null) {
             twitchChannel = getUserLogin(streamingUrl);
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
-                Config serverConfig = getConfig(server);
-                if (serverConfig != null && serverConfig.hasPath("announce")) {
-                    if (user != null && serverConfig.hasPath("announce.roles") && !Utils.hasRole(user, server, serverConfig.getStringList("announce.roles"))) {
+                Config announceConfig = getConfig(server, "announce");
+                if (announceConfig != null) {
+                    if (user != null && announceConfig.hasPath("roles") && !Utils.hasRole(user, server, announceConfig.getStringList("roles"))) {
                         continue;
                     }
 
                     ServerData serverData = getServerData(server);
                     serverData.getLiveUsers().add(rawName.toLowerCase());
 
-                    if (serverConfig.hasPath("announce.channel")) {
+                    if (announceConfig.hasPath("channel")) {
                         String message = Utils.replace(
-                                serverConfig.hasPath("announce.message") ? serverConfig.getString("announce.message") : "%name% is now live: %url%",
+                                announceConfig.hasPath("message") ? announceConfig.getString("message") : "%name% is now live: %url%",
                                 "streamname", twitchChannel != null ? twitchChannel : user != null ? user.getDisplayName(server) : rawName,
                                 "username", user != null ? user.getDisplayName(server) : rawName,
                                 "game", game,
@@ -438,19 +438,19 @@ public class StreamingManager extends Manager {
                                 "url", streamingUrl
                         );
                         if (streamData == null) {
-                            ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
+                            ServerTextChannel channel = Utils.getTextChannel(server, announceConfig.getString("channel"));
                             if (channel != null) {
                                 channel.sendMessage(message);
                             } else {
-                                log(Level.WARNING, "Could not find announce channel " + serverConfig.getString("announce.channel") + " on server " + server.getName() + "/" + server.getId());
+                                log(Level.WARNING, "Could not find announce channel " + announceConfig.getString("channel") + " on server " + server.getName() + "/" + server.getId());
                             }
                         } else {
                             updateNotificationMessage(server, streamingUrl, message);
                         }
                     }
-                    if (serverData.getLiveUsers().size() == 1 && serverConfig.hasPath("announce.icon.live")) {
+                    if (serverData.getLiveUsers().size() == 1 && announceConfig.hasPath("icon.live")) {
                         try {
-                            server.updateIcon(new URL(serverConfig.getString("announce.icon.live")));
+                            server.updateIcon(new URL(announceConfig.getString("icon.live")));
                         } catch (MalformedURLException e) {
                             e.printStackTrace();
                         }
@@ -494,14 +494,14 @@ public class StreamingManager extends Manager {
         }
 
         for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
-            Config serverConfig = getConfig(server);
-            if (serverConfig != null && serverConfig.hasPath("announce")) {
+            Config announceConfig = getConfig(server, "announce");
+            if (announceConfig != null) {
                 ServerData serverData = getServerData(server);
                 logDebug("Currently live: " + String.join(", ", serverData.getLiveUsers()));
                 serverData.getLiveUsers().remove(rawName.toLowerCase());
-                if (streamData != null && serverConfig.hasPath("announce.channel") && serverConfig.hasPath("announce.offline")) {
+                if (streamData != null && announceConfig.hasPath("channel") && announceConfig.hasPath("offline")) {
                     String newMessage = Utils.replace(
-                            serverConfig.getString("announce.offline"),
+                            announceConfig.getString("offline"),
                             "streamname", twitchChannel != null ? twitchChannel : user != null ? user.getDisplayName(server) : rawName,
                             "username", user != null ? user.getDisplayName(server) : rawName,
                             "game", streamData.getGame(),
@@ -512,11 +512,11 @@ public class StreamingManager extends Manager {
                     logDebug("Setting announce message to: " + newMessage);
                     updateNotificationMessage(server, streamData.getUrl(), newMessage);
                 }
-                if (serverData.getLiveUsers().isEmpty() && serverConfig.hasPath("announce.icon.live")) {
-                    if (serverConfig.hasPath("announce.icon.offline")) {
+                if (serverData.getLiveUsers().isEmpty() && announceConfig.hasPath("icon.live")) {
+                    if (announceConfig.hasPath("icon.offline")) {
                         try {
-                            logDebug("Updating icon to configured offline icon " + serverConfig.getString("announce.icon.offline"));
-                            server.updateIcon(new URL(serverConfig.getString("announce.icon.offline")));
+                            logDebug("Updating icon to configured offline icon " + announceConfig.getString("icon.offline"));
+                            server.updateIcon(new URL(announceConfig.getString("icon.offline")));
                         } catch (MalformedURLException e) {
                             server.updateIcon(serverData.getIcon());
                             e.printStackTrace();
@@ -587,7 +587,7 @@ public class StreamingManager extends Manager {
     }
 
     private void joinTwitchChat(String twitchChannel) {
-        if (twitchChannel != null && !twitchClient.getChat().getCurrentChannels().contains(twitchChannel)) {
+        if (twitchChannel != null && !twitchClient.getChat().getChannels().contains(twitchChannel)) {
             twitchClient.getChat().joinChannel(twitchChannel);
             logDebug("Joined " + twitchChannel + " Twitch channel");
             logDebug(twitchClient.getChat().getConnectionState() + " " + String.join(", ", twitchClient.getChat().getCurrentChannels()));

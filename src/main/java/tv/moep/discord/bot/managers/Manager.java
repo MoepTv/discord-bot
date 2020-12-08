@@ -58,6 +58,14 @@ public abstract class Manager {
         }
     }
 
+    public Config getConfig(Server server, String path) {
+        try {
+            return getConfig().getConfig(server.getIdAsString() + "." + path);
+        } catch (ConfigException e) {
+            return null;
+        }
+    }
+
     public boolean has(Server server, String option) {
         if (getConfig().hasPath(server.getIdAsString() + "." + option)) {
             return getConfig().getBoolean(server.getIdAsString() + "." + option);
