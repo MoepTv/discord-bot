@@ -31,6 +31,7 @@ import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
 import tv.moep.discord.bot.commands.ListCommand;
+import tv.moep.discord.bot.commands.RandomCommand;
 import tv.moep.discord.bot.managers.InviteManager;
 import tv.moep.discord.bot.managers.JoinLeaveManager;
 import tv.moep.discord.bot.managers.MessageManager;
@@ -130,6 +131,7 @@ public class MoepsBot {
             return true;
         });
         registerCommand(new ListCommand(this));
+        registerCommand(new RandomCommand(this));
         notifyOperators("Started " + NAME + " v" + VERSION);
         synchronized (MoepsBot.this) {
             try {

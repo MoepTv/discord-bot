@@ -45,11 +45,15 @@ public class DiscordSender implements CommandSender<Message> {
 
     @Override
     public CompletableFuture<Message> sendMessage(String message) {
-        CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(new EmbedBuilder()
-                .setTitle(message)
+        EmbedBuilder embed = new EmbedBuilder()
                 .setFooter("Answer to " + this.message.getAuthor().getDiscriminatedName())
-                .setColor(Utils.getRandomColor())
-        );
+                .setColor(Utils.getRandomColor());
+        if (message.length() > 256) {
+            embed.setDescription(message);
+        } else {
+            embed.setTitle(message);
+        }
+        CompletableFuture<Message> messageFuture = this.message.getChannel().sendMessage(embed);
         if (!(this.message.getChannel() instanceof ServerTextChannel)
                 || bot.getTextChannelManager().has((ServerTextChannel) this.message.getChannel(), "emojiRemoval")) {
             messageFuture.thenAccept(m -> m.addReaction(MessageReaction.REMOVE));
