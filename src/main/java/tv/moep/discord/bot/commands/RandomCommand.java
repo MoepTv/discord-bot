@@ -85,11 +85,24 @@ public class RandomCommand extends Command<DiscordSender> {
                                             .setColor(Utils.getRandomColor())
                                             .setDescription(option)
                                             .setAuthor(sender.getUser())
-                                            .setFooter("(Private random message sent by " + sender.getUser().getDiscriminatedName() + ")"));
+                                            .setFooter("(Private random message sent by " + sender.getUser().getDiscriminatedName() + ")")
+                                    ).whenComplete((m, e) -> {
+                                        if (m == null) {
+                                            if (e != null) {
+                                                sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! " + e.getMessage() + ".");
+                                            } else {
+                                                sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
+                                            }
+                                            sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
+                                        }
+                                    });
+                                    return;
                                 } else if (ex != null) {
                                     sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! " + ex.getMessage() + ".");
-                                    sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
+                                } else {
+                                    sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
                                 }
+                                sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
                             });
 
                         }
