@@ -372,7 +372,7 @@ public class StreamingManager extends Manager {
                     "title", streamData.getTitle(),
                     "url", streamData.getUrl()
             );
-            updateNotificationMessage(server, streamData.getUrl(), newMessage);
+            updateNotificationMessage(server, streamData.getUrl(), newMessage, false);
         }
     }
 
@@ -445,7 +445,7 @@ public class StreamingManager extends Manager {
                                 log(Level.WARNING, "Could not find announce channel " + announceConfig.getString("channel") + " on server " + server.getName() + "/" + server.getId());
                             }
                         } else {
-                            updateNotificationMessage(server, streamingUrl, message);
+                            updateNotificationMessage(server, streamingUrl, message, false);
                         }
                     }
                     if (serverData.getLiveUsers().size() == 1 && announceConfig.hasPath("icon.live")) {
@@ -510,7 +510,7 @@ public class StreamingManager extends Manager {
                             "vodurl", vodUrl
                     );
                     logDebug("Setting announce message to: " + newMessage);
-                    updateNotificationMessage(server, streamData.getUrl(), newMessage);
+                    updateNotificationMessage(server, streamData.getUrl(), newMessage, true);
                 }
                 if (serverData.getLiveUsers().isEmpty() && announceConfig.hasPath("icon.live")) {
                     if (announceConfig.hasPath("icon.offline")) {
@@ -559,7 +559,7 @@ public class StreamingManager extends Manager {
         return parts.length > 1 ? WordUtils.capitalize(parts[1], new char[]{'_', '-'}) : null;
     }
 
-    private void updateNotificationMessage(Server server, String streamingUrl, String message) {
+    private void updateNotificationMessage(Server server, String streamingUrl, String message, boolean offline) {
         Config serverConfig = getConfig(server);
         ServerTextChannel channel = Utils.getTextChannel(server, serverConfig.getString("announce.channel"));
         if (channel == null) {
@@ -572,7 +572,7 @@ public class StreamingManager extends Manager {
                     if (message.equalsIgnoreCase("delete")) {
                         log(Level.FINE, "Deleting message " + m.getIdAsString() + " due to config (" + message + ")");
                         m.delete("Stream is now offline");
-                    } else if (m.getCreationTimestamp().isAfter(Instant.now().minus(Duration.ofMinutes(5)))) {
+                    } else if (offline && m.getCreationTimestamp().isAfter(Instant.now().minus(Duration.ofMinutes(5)))) {
                         log(Level.FINE, "Deleting message " + m.getIdAsString() + " due to it being less than 5 minutes old");
                         m.delete("Stream started less than 5 minutes ago");
                     } else {
