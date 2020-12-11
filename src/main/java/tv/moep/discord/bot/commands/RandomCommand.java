@@ -81,15 +81,11 @@ public class RandomCommand extends Command<DiscordSender> {
                             String option = options.remove(0);
                             user.openPrivateChannel().whenComplete((c, ex) -> {
                                 if (c != null) {
-                                    EmbedBuilder embed = new EmbedBuilder()
+                                    c.sendMessage(new EmbedBuilder()
                                             .setColor(Utils.getRandomColor())
-                                            .setAuthor(sender.getUser());
-                                    if (option.length() > 256) {
-                                        embed.setDescription(option);
-                                    } else {
-                                        embed.setTitle(option);
-                                    }
-                                    c.sendMessage(embed);
+                                            .setDescription(option)
+                                            .setAuthor(sender.getUser())
+                                            .setFooter("(Private random message sent by " + sender.getUser().getDiscriminatedName() + ")"));
                                 } else if (ex != null) {
                                     sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! " + ex.getMessage() + ".");
                                     sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
