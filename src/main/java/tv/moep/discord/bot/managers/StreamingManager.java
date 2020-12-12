@@ -420,6 +420,7 @@ public class StreamingManager extends Manager {
             twitchChannel = getUserLogin(streamingUrl);
             for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
                 Config announceConfig = getConfig(server, "announce");
+                logDebug("Handling server " + server.getName() + ". (" + (announceConfig != null) + ")");
                 if (announceConfig != null) {
                     if (user != null && announceConfig.hasPath("roles") && !Utils.hasRole(user, server, announceConfig.getStringList("roles"))) {
                         continue;
@@ -495,6 +496,7 @@ public class StreamingManager extends Manager {
 
         for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
             Config announceConfig = getConfig(server, "announce");
+            logDebug("Handling server " + server.getName() + ". (" + (announceConfig != null) + ")");
             if (announceConfig != null) {
                 ServerData serverData = getServerData(server);
                 logDebug("Currently live: " + String.join(", ", serverData.getLiveUsers()));
