@@ -70,9 +70,6 @@ public abstract class Manager {
         if (getConfig().hasPath(server.getIdAsString() + "." + option)) {
             return getConfig().getBoolean(server.getIdAsString() + "." + option);
         }
-        if (getConfig().hasPath(server.getIdAsString() + "." + option)) {
-            return getConfig().getBoolean(server.getIdAsString() + "." + option);
-        }
         return false;
     }
 
