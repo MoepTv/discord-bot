@@ -220,7 +220,7 @@ public class MoepsBot {
         saveResource(name + ".conf");
         Config fallbackConfig;
         try {
-            fallbackConfig = ConfigFactory.load(name + ".conf");
+            fallbackConfig = ConfigFactory.parseResourcesAnySyntax(name + ".conf");
         } catch (ConfigException e) {
             log(Level.SEVERE, "Error while loading " + name + ".conf fallback config!", e);
             fallbackConfig = ConfigFactory.empty("Empty " + name + ".conf fallback due to loading error: " + e.getMessage());
