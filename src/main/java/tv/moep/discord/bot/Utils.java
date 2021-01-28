@@ -137,7 +137,7 @@ public class Utils {
 
                 json.addProperty("name", String.join(", ", names));
                 json.addProperty("description", "Posted by " + message.getAuthor().getDiscriminatedName()
-                        + " in " + ((ServerTextChannel) message.getChannel()).getName()
+                        + " in #" + ((ServerTextChannel) message.getChannel()).getName()
                         + " of " + ((ServerTextChannel) message.getChannel()).getServer().getName()
                 );
                 json.addProperty("expires", OffsetDateTime.now().plusDays(30).format(DateTimeFormatter.ISO_DATE_TIME));
@@ -159,7 +159,7 @@ public class Utils {
                     Paste paste = new Paste(result);
                     MoepsBot.log(Level.INFO, "Created paste " + paste.getName()
                             + " for " + message.getAuthor().getDiscriminatedName()
-                            + " in " + ((ServerTextChannel) message.getChannel()).getName()
+                            + " in #" + ((ServerTextChannel) message.getChannel()).getName()
                             + " of " + ((ServerTextChannel) message.getChannel()).getServer().getName()
                             + " with link " + paste.getLink()
                             + " and deletion key " + paste.getDeletionKey());
