@@ -415,6 +415,7 @@ public class StreamingManager extends Manager {
             streamData.setTitle(title);
         }
 
+        boolean hasHandledRole = false;
         String twitchChannel = null;
         if (streamingUrl != null) {
             twitchChannel = getUserLogin(streamingUrl);
@@ -425,6 +426,8 @@ public class StreamingManager extends Manager {
                     if (user != null && announceConfig.hasPath("roles") && !Utils.hasRole(user, server, announceConfig.getStringList("roles"))) {
                         continue;
                     }
+
+                    hasHandledRole = true;
 
                     ServerData serverData = getServerData(server);
                     serverData.getLiveUsers().add(rawName.toLowerCase());
@@ -465,10 +468,14 @@ public class StreamingManager extends Manager {
         }
 
         if (user != null) {
+            boolean isInVoice = false;
             for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
+                isInVoice = true;
                 if (markChannel) {
                     markChannelName(voiceChannel);
                 }
+            }
+            if (hasHandledRole && isInVoice) {
                 joinTwitchChat(twitchChannel);
             }
         }
