@@ -419,7 +419,7 @@ public class StreamingManager extends Manager {
         String twitchChannel = null;
         if (streamingUrl != null) {
             twitchChannel = getUserLogin(streamingUrl);
-            for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
+            for (Server server : user != null && !user.getMutualServers().isEmpty() ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
                 Config announceConfig = getConfig(server, "announce");
                 logDebug("Handling server " + server.getName() + ". (" + (announceConfig != null) + ")");
                 if (announceConfig != null) {
@@ -501,7 +501,7 @@ public class StreamingManager extends Manager {
             vodUrl = getVodUrl(streamData.getUrl(), streamData.getGameId());
         }
 
-        for (Server server : user != null ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
+        for (Server server : user != null && !user.getMutualServers().isEmpty() ? user.getMutualServers() : getMoepsBot().getDiscordApi().getServers()) {
             Config announceConfig = getConfig(server, "announce");
             logDebug("Handling server " + server.getName() + ". (" + (announceConfig != null) + ")");
             if (announceConfig != null) {
