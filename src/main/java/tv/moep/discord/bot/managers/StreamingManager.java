@@ -178,13 +178,19 @@ public class StreamingManager extends Manager {
                         if (userList.isEmpty()) {
                             log(Level.WARNING, "Unable to query API?");
                         }
+                    } catch (Exception e) {
+                        log(Level.SEVERE, "OAuth token might be invalid! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=" + (username != null ? "chat:edit%20chat:read%20whispers:read%20whispers:edit" : ""));
+                        throw e;
+                    }
+                    try {
                         if (username != null) {
                             twitchClient.getChat().joinChannel("MoepsBot");
                             twitchClient.getChat().sendMessage(username, "Testing " + MoepsBot.NAME + " " + MoepsBot.VERSION + " Twitch chat setup!");
                         }
                     } catch (Exception e) {
-                        log(Level.SEVERE, "OAuth token might be invalid! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=");
-                        throw e;
+                        log(Level.SEVERE, "Unable to use chat functionality! Please make sure you've granted the required rights! https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=chat:edit%20chat:read%20whispers:read%20whispers:edit");
+                        log(Level.SEVERE, e.getMessage());
+                        username = null;
                     }
                 }
                 BiMap<String, String> newListeners = HashBiMap.create();
