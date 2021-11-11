@@ -39,8 +39,6 @@ import com.google.common.collect.HashBiMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import org.apache.commons.lang.WordUtils;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerTextChannel;
@@ -64,6 +62,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -651,19 +650,113 @@ public class StreamingManager extends Manager {
         return channel.getName().startsWith(markerPrefix) && channel.getName().endsWith(markerSuffix);
     }
 
-    @Data
-    @AllArgsConstructor
     private class StreamData {
         private final String url;
         private String gameId;
         private String game;
         private String title;
+
+        private StreamData(String url, String gameId, String game, String title) {
+            this.url = url;
+            this.gameId = gameId;
+            this.game = game;
+            this.title = title;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public String getGameId() {
+            return gameId;
+        }
+
+        public void setGameId(String gameId) {
+            this.gameId = gameId;
+        }
+
+        public String getGame() {
+            return game;
+        }
+
+        public void setGame(String game) {
+            this.game = game;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            StreamData that = (StreamData) o;
+            return Objects.equals(url, that.url) && Objects.equals(gameId, that.gameId) && Objects.equals(game, that.game) && Objects.equals(title, that.title);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(url, gameId, game, title);
+        }
+
+        @Override
+        public String toString() {
+            return "StreamData{" +
+                    "url='" + url + '\'' +
+                    ", gameId='" + gameId + '\'' +
+                    ", game='" + game + '\'' +
+                    ", title='" + title + '\'' +
+                    '}';
+        }
     }
 
-    @Data
     private class ServerData {
         private final Long id;
         private final URL icon;
         private Set<String> liveUsers = new LinkedHashSet<>();
+
+        public ServerData(Long id, URL icon) {
+            this.id = id;
+            this.icon = icon;
+        }
+
+        public Long getId() {
+            return id;
+        }
+
+        public URL getIcon() {
+            return icon;
+        }
+
+        public Set<String> getLiveUsers() {
+            return liveUsers;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ServerData that = (ServerData) o;
+            return Objects.equals(id, that.id) && Objects.equals(icon, that.icon) && Objects.equals(liveUsers, that.liveUsers);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, icon, liveUsers);
+        }
+
+        @Override
+        public String toString() {
+            return "ServerData{" +
+                    "id=" + id +
+                    ", icon=" + icon +
+                    ", liveUsers=" + liveUsers +
+                    '}';
+        }
     }
 }

@@ -21,7 +21,6 @@ package tv.moep.discord.bot;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
-import lombok.Getter;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.permission.PermissionType;
@@ -64,7 +63,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
 
-@Getter
 public class MoepsBot {
     private static final DateFormat TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ");
 
@@ -302,5 +300,49 @@ public class MoepsBot {
             }
         }
         return null;
+    }
+
+    public Config getConfig() {
+        return config;
+    }
+
+    public Map<String, Command> getCommands() {
+        return commands;
+    }
+
+    public DiscordApi getDiscordApi() {
+        return discordApi;
+    }
+
+    public StreamingManager getStreamingManager() {
+        return streamingManager;
+    }
+
+    public VoiceChannelManager getVoiceChannelManager() {
+        return voiceChannelManager;
+    }
+
+    public PrivateConversationManager getPrivateConversationManager() {
+        return privateConversationManager;
+    }
+
+    public JoinLeaveManager getJoinLeaveManager() {
+        return joinLeaveManager;
+    }
+
+    public TextChannelManager getTextChannelManager() {
+        return textChannelManager;
+    }
+
+    public MessageManager getMessageManager() {
+        return messageManager;
+    }
+
+    public RoleManager getRoleManager() {
+        return roleManager;
+    }
+
+    public InviteManager getInviteManager() {
+        return inviteManager;
     }
 }

@@ -18,7 +18,6 @@ package tv.moep.discord.bot.commands;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import lombok.Getter;
 import tv.moep.discord.bot.Permission;
 
 import java.util.Arrays;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-@Getter
 public abstract class Command<T extends CommandSender> {
     private final Command parent;
     private final String name;
@@ -96,5 +94,29 @@ public abstract class Command<T extends CommandSender> {
 
     public Command<T> getSubCommand(String name) {
         return subCommands.get(name.toLowerCase());
+    }
+
+    public Command getParent() {
+        return parent;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getUsage() {
+        return usage;
+    }
+
+    public Permission getPermission() {
+        return permission;
+    }
+
+    public List<String> getAliases() {
+        return aliases;
+    }
+
+    public Map<String, Command> getSubCommands() {
+        return subCommands;
     }
 }

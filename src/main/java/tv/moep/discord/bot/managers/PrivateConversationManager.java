@@ -23,7 +23,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import lombok.Data;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.util.NonThrowingAutoCloseable;
 import tv.moep.discord.bot.MoepsBot;
@@ -141,7 +140,6 @@ public class PrivateConversationManager extends Manager {
         return false;
     }
 
-    @Data
     private class Topic {
         private final String name;
         private final boolean onlyOnce;
@@ -159,6 +157,22 @@ public class PrivateConversationManager extends Manager {
             if (responses.isEmpty() && config.hasPath("response")) {
                 responses.add(config.getString("response"));
             }
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public boolean isOnlyOnce() {
+            return onlyOnce;
+        }
+
+        public HashSet<String> getTriggers() {
+            return triggers;
+        }
+
+        public List<String> getResponses() {
+            return responses;
         }
     }
 }
