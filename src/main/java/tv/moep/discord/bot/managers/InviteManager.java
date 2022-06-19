@@ -2,7 +2,7 @@ package tv.moep.discord.bot.managers;
 
 /*
  * MoepTv - bot
- * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
+ * Copyright (C) 2022 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -110,7 +110,7 @@ public class InviteManager extends Manager {
                 Map<String, Integer> inviteMap = inviteCounts.row(server.getId());
                 try {
                     for (RichInvite invite : server.getInvites().get()) {
-                        logDebug("Found invite " + invite.getCode() + " " + invite.getUses() + "/" + invite.getMaxUses() + " " + invite.getMaxAgeInSeconds() + " " + (invite.getInviter() != null ? invite.getInviter().getDiscriminatedName() : "null"));
+                        logDebug("Found invite " + invite.getCode() + " " + invite.getUses() + "/" + invite.getMaxUses() + " " + invite.getMaxAgeInSeconds() + " " + invite.getInviter().map(User::getDiscriminatedName).orElse("null"));
                         if (isValid(invite)) {
                             inviteMap.putIfAbsent(invite.getCode(), invite.getUses());
                         } else {
@@ -125,7 +125,7 @@ public class InviteManager extends Manager {
     }
 
     private void handleInvite(User user, RichInvite invite, Server server) {
-        log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + (invite.getInviter() != null ? invite.getInviter().getDiscriminatedName() : "null"));
+        log(Level.FINE, user.getDiscriminatedName() + " joined with invite " + invite.getCode() + " from " + invite.getInviter().map(User::getDiscriminatedName).orElse("null"));
 
         List<String> inviteRoles = Utils.getList(getConfig(), server.getId() + ".inviteRoles." + invite.getCode());
         for (String inviteRole : inviteRoles) {
@@ -138,8 +138,8 @@ public class InviteManager extends Manager {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             Role addRole = null;
-            if (invite.getInviter() != null) {
-                for (Role role : invite.getInviter().getRoles(server)) {
+            if (invite.getInviter().isPresent()) {
+                for (Role role : invite.getInviter().get().getRoles(server)) {
                     for (Role availableRole : availableRoles) {
                         if (availableRole.getPosition() <= role.getPosition() && (addRole == null || addRole.getPosition() < availableRole.getPosition())) {
                             addRole = availableRole;

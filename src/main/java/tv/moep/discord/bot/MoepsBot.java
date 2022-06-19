@@ -2,7 +2,7 @@ package tv.moep.discord.bot;
 
 /*
  * MoepTv - bot
- * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
+ * Copyright (C) 2022 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -150,7 +150,11 @@ public class MoepsBot {
         List<CompletableFuture<User>> operators = new ArrayList<>();
         operators.add(getDiscordApi().getOwner());
         for (String id : getConfig().getStringList("discord.operators")) {
-            operators.add(getDiscordApi().getUserById(id));
+            if (id.contains("#")) {
+                getDiscordApi().getCachedUserByDiscriminatedName(id).ifPresent(u -> operators.add(CompletableFuture.completedFuture(u)));
+            } else {
+                operators.add(getDiscordApi().getUserById(id));
+            }
         }
         for (CompletableFuture<User> future : operators) {
             try {

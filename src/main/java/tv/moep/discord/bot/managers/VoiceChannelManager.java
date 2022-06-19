@@ -2,7 +2,7 @@ package tv.moep.discord.bot.managers;
 
 /*
  * MoepTv - bot
- * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
+ * Copyright (C) 2022 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,7 @@ import java.util.logging.Level;
 
 public class VoiceChannelManager extends Manager {
 
-    private Cache<Long, MoveRequest> moveRequests = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
+    private final Cache<Long, MoveRequest> moveRequests = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
 
     public VoiceChannelManager(MoepsBot moepsBot) {
         super(moepsBot, "voice-channel");
@@ -52,10 +52,13 @@ public class VoiceChannelManager extends Manager {
         moepsBot.getDiscordApi().addServerVoiceChannelMemberJoinListener(event -> {
             User user = event.getUser();
             ServerVoiceChannel voiceChannel = event.getChannel();
-            if (user.getActivity().isPresent() && user.getActivity().get().getType() == ActivityType.PLAYING) {
-                Optional<ServerVoiceChannel> newVoice = checkForMove(user, user.getActivity().get(), event.getChannel());
-                if (newVoice.isPresent()) {
-                    voiceChannel = newVoice.get();
+            for (Activity activity : user.getActivities()) {
+                if (activity.getType() == ActivityType.PLAYING) {
+                    Optional<ServerVoiceChannel> newVoice = checkForMove(user, activity, event.getChannel());
+                    if (newVoice.isPresent()) {
+                        voiceChannel = newVoice.get();
+                        break;
+                    }
                 }
             }
 
@@ -83,10 +86,19 @@ public class VoiceChannelManager extends Manager {
         });
 
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
-            User user = event.getUser();
-            if (event.getNewActivity().isPresent() && event.getNewActivity().get().getType() == ActivityType.PLAYING) {
-                for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
-                    checkForMove(user, event.getNewActivity().get(), voiceChannel);
+            if (event.getUser().isEmpty())
+                return;
+
+            User user = event.getUser().get();
+
+            ACTIVITIES:
+            for (Activity activity : event.getNewActivities()) {
+                if (activity.getType() == ActivityType.PLAYING) {
+                    for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
+                        if (checkForMove(user, activity, voiceChannel).isPresent()) {
+                            break ACTIVITIES;
+                        }
+                    }
                 }
             }
         });

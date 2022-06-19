@@ -2,7 +2,7 @@ package tv.moep.discord.bot.managers;
 
 /*
  * MoepTv - bot
- * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
+ * Copyright (C) 2022 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,7 @@ import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,41 +52,43 @@ public class RoleManager extends Manager {
         for (Server server : moepsBot.getDiscordApi().getServers()) {
             if (getConfig(server) != null) {
                 for (User user : server.getMembers()) {
-                    updateRoles(user, user.getActivity().orElse(null), server);
+                    updateRoles(user, user.getActivities(), server);
                 }
             }
         }
 
         moepsBot.getDiscordApi().addReactionAddListener(event -> {
-            if (event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
+            if (event.getUser().isPresent() && event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
                 Config config = getConfig(event.getServer().get());
                 String path = "reactions." + event.getMessageId() + "." + event.getEmoji().asCustomEmoji().get().getName();
                 if (config != null && config.hasPath(path)) {
                     event.getServer().get()
                             .getRoleById(config.getLong(path))
-                            .filter(r -> !r.hasUser(event.getUser()))
-                            .ifPresent(r -> event.getUser().addRole(r)
-                                    .thenAccept(a -> logDebug("[Reaction] Added role " + r.getName() + " to " + event.getUser().getDiscriminatedName())));
+                            .filter(r -> !r.hasUser(event.getUser().get()))
+                            .ifPresent(r -> event.getUser().get().addRole(r)
+                                    .thenAccept(a -> logDebug("[Reaction] Added role " + r.getName() + " to " + event.getUser().get().getDiscriminatedName())));
                 }
             }
         });
 
         moepsBot.getDiscordApi().addReactionRemoveListener(event -> {
-            if (event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
+            if (event.getUser().isPresent() && event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
                 Config config = getConfig(event.getServer().get());
                 String path = "reactions." + event.getMessageId() + "." + event.getEmoji().asCustomEmoji().get().getName();
                 if (config != null && config.hasPath(path)) {
                     event.getServer().get()
                             .getRoleById(config.getLong(path))
-                            .filter(r -> r.hasUser(event.getUser()))
-                            .ifPresent(r -> event.getUser().removeRole(r)
-                                    .thenAccept(a -> logDebug("[Reaction] Removed role " + r.getName() + " from " + event.getUser().getDiscriminatedName())));
+                            .filter(r -> r.hasUser(event.getUser().get()))
+                            .ifPresent(r -> event.getUser().get().removeRole(r)
+                                    .thenAccept(a -> logDebug("[Reaction] Removed role " + r.getName() + " from " + event.getUser().get().getDiscriminatedName())));
                 }
             }
         });
 
         moepsBot.getDiscordApi().addUserChangeActivityListener(event -> {
-            updateRoles(event.getUser(), event.getNewActivity().orElse(null));
+            if (event.getUser().isPresent()) {
+                updateRoles(event.getUser().get(), event.getNewActivities());
+            }
         });
 
         for (ActivityType type : ActivityType.values()) {
@@ -110,11 +113,11 @@ public class RoleManager extends Manager {
         }
     }
 
-    private boolean updateRoles(User user, Activity activity) {
+    private boolean updateRoles(User user, Collection<Activity> activities) {
         boolean r = false;
         for (Server server : user.getMutualServers()) {
             if (getConfig(server) != null) {
-                r |= updateRoles(user, activity, server);
+                r |= updateRoles(user, activities, server);
             }
         }
         return r;
@@ -130,9 +133,14 @@ public class RoleManager extends Manager {
         return r;
     }
 
-    private boolean updateRoles(User user, Activity activity, Server server) {
-        if (activity != null) {
-            return updateRoles(user, activity.getType(), activity.getName(), server);
+    private boolean updateRoles(User user, Collection<Activity> activities, Server server) {
+        if (!activities.isEmpty()) {
+            for (Activity activity : activities) {
+                if (updateRoles(user, activity.getType(), activity.getName(), server)) {
+                    return true;
+                }
+            }
+            return false;
         } else {
             return updateRoles(user, null, null, server);
         }

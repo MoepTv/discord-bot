@@ -2,7 +2,7 @@ package tv.moep.discord.bot.managers;
 
 /*
  * MoepTv - bot
- * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
+ * Copyright (C) 2022 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueType;
 import org.apache.commons.lang.WordUtils;
+import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.activity.ActivityType;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.ServerVoiceChannel;
@@ -78,13 +79,13 @@ public class StreamingManager extends Manager {
 
     private BiMap<String, String> listeners = HashBiMap.create();
 
-    private LoadingCache<String, String> gameCache = Caffeine.newBuilder().build((gameId) -> {
+    private final LoadingCache<String, String> gameCache = Caffeine.newBuilder().build((gameId) -> {
             List<Game> games = twitchClient.getHelix().getGames(oAuthToken, Collections.singletonList(gameId), null).execute().getGames();
             return games.isEmpty() ? null : games.iterator().next().getName();
     });
 
-    private Map<String, StreamData> streams = new HashMap<>();
-    private Map<Long, ServerData> serverData = new HashMap<>();
+    private final Map<String, StreamData> streams = new HashMap<>();
+    private final Map<Long, ServerData> serverData = new HashMap<>();
 
     public StreamingManager(MoepsBot moepsBot) {
         super(moepsBot, "streaming");
@@ -156,10 +157,13 @@ public class StreamingManager extends Manager {
                             return;
                         }
                         CredentialManager credentialManager = CredentialManagerBuilder.builder().build();
-                        credentialManager.registerIdentityProvider(new TwitchIdentityProvider(getConfig().getString("twitch.client.id"), getConfig().getString("twitch.client.secret"), redirectUrl));
+                        OAuth2Credential oAuth = new OAuth2Credential("twitch", oAuthToken);
+                        TwitchIdentityProvider identityProvider = new TwitchIdentityProvider(getConfig().getString("twitch.client.id"), getConfig().getString("twitch.client.secret"), redirectUrl);
+                        oAuth = identityProvider.getAdditionalCredentialInformation(oAuth).orElse(oAuth);
+                        credentialManager.registerIdentityProvider(identityProvider);
                         twitchClientBuilder = twitchClientBuilder
                                 .withCredentialManager(credentialManager)
-                                .withDefaultAuthToken(new OAuth2Credential("twitch", oAuthToken));
+                                .withDefaultAuthToken(oAuth);
                     } else {
                         log(Level.SEVERE, "No client ID/secret provided!");
                         return;
@@ -183,7 +187,7 @@ public class StreamingManager extends Manager {
                     }
                     try {
                         if (username != null) {
-                            twitchClient.getChat().joinChannel("MoepsBot");
+                            twitchClient.getChat().joinChannel(username);
                             twitchClient.getChat().sendMessage(username, "Testing " + MoepsBot.NAME + " " + MoepsBot.VERSION + " Twitch chat setup!");
                         }
                     } catch (Exception e) {
@@ -253,13 +257,16 @@ public class StreamingManager extends Manager {
                                                 : "!";
                                 if (event.getMessage().startsWith(commandPrefix)) {
                                     switch (event.getMessage().toLowerCase().substring(1)) {
-                                        case "group":
-                                        case "voice":
-                                        case "gruppe":
+                                        case "group", "voice", "gruppe" -> {
                                             String discordId = listeners.get(event.getChannel().getName().toLowerCase());
                                             User user = getMoepsBot().getUser(discordId);
+                                            if (user == null) {
+                                                logDebug(event.getMessage() + ": No user with ID " + discordId + " found!");
+                                                return;
+                                            }
+
                                             Map<String, String> userInfos = new LinkedHashMap<>();
-                                            logDebug("Executing command " + event.getMessage() + " in " + event.getChannel().getName() + " with " + discordId + "/" + (user != null ? user.getDiscriminatedName() : "null"));
+                                            logDebug("Executing command " + event.getMessage() + " in " + event.getChannel().getName() + " with " + discordId + "/" + user.getDiscriminatedName());
                                             for (ServerVoiceChannel voiceChannel : user.getConnectedVoiceChannels()) {
                                                 if (getConfig(voiceChannel.getServer()) != null) {
                                                     for (User connectedUser : voiceChannel.getConnectedUsers()) {
@@ -274,7 +281,7 @@ public class StreamingManager extends Manager {
                                             if (!userInfos.isEmpty()) {
                                                 event.getTwitchChat().sendMessage(event.getChannel().getName(), String.join(", ", userInfos.values()));
                                             }
-                                            return;
+                                        }
                                     }
                                 }
                             }
@@ -313,19 +320,36 @@ public class StreamingManager extends Manager {
         });
 
         getMoepsBot().getDiscordApi().addUserChangeActivityListener(event -> {
-            if (event.getNewActivity().isPresent() && event.getNewActivity().get().getType() == ActivityType.STREAMING) {
-                onLive(
-                        event.getUser(),
-                        event.getUser().getDiscriminatedName(),
-                        event.getNewActivity().get().getStreamingUrl().orElse(null),
-                        getGameId(event.getNewActivity().get().getName()),
-                        event.getNewActivity().get().getName(),
-                        event.getNewActivity().get().getDetails().orElse("")
-                );
-                log(Level.FINE, event.getUser().getDiscriminatedName() + " stream online due to activity");
-            } else if (event.getOldActivity().isPresent() && event.getOldActivity().get().getType() == ActivityType.STREAMING) {
-                onOffline(event.getUser(), event.getUser().getDiscriminatedName());
-                log(Level.FINE, event.getUser().getDiscriminatedName() + " stream offline due to activity");
+            if (event.getUser().isEmpty())
+                return;
+
+            User user = event.getUser().get();
+            boolean isStreaming = false;
+            for (Activity activity : event.getNewActivities()) {
+                if (activity.getType() == ActivityType.STREAMING) {
+                    isStreaming = true;
+                    if (event.getOldActivities().stream().noneMatch(a -> a.getType() == ActivityType.STREAMING)) {
+                        onLive(
+                                user,
+                                user.getDiscriminatedName(),
+                                activity.getStreamingUrl().orElse(null),
+                                getGameId(activity.getName()),
+                                activity.getName(),
+                                activity.getDetails().orElse("")
+                        );
+                        log(Level.FINE, user.getDiscriminatedName() + " stream online due to activity");
+                    }
+                    break;
+                }
+            }
+
+            if (!isStreaming) {
+                for (Activity activity : event.getOldActivities()) {
+                    if (activity.getType() == ActivityType.STREAMING) {
+                        onOffline(user, user.getDiscriminatedName());
+                        log(Level.FINE, user.getDiscriminatedName() + " stream offline due to activity");
+                    }
+                }
             }
         });
     }

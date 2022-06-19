@@ -2,7 +2,7 @@ package tv.moep.discord.bot.commands;
 
 /*
  * MoepTv - bot
- * Copyright (C) 2020 Max Lee aka Phoenix616 (max@themoep.de)
+ * Copyright (C) 2022 Max Lee aka Phoenix616 (max@themoep.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -97,7 +97,8 @@ public class DiscordSender implements CommandSender<Message> {
             case OPERATOR:
                 return message.getUserAuthor().isPresent()
                         && (message.getUserAuthor().get().isBotOwner()
-                                || bot.getConfig().getStringList("discord.operators").contains(message.getAuthor().getIdAsString()));
+                                || bot.getConfig().getStringList("discord.operators").contains(message.getAuthor().getIdAsString())
+                                || bot.getConfig().getStringList("discord.operators").contains(message.getAuthor().getDiscriminatedName()));
         }
         return false;
     }
