@@ -24,6 +24,10 @@
             <id>jcenter-snapshot</id>
             <url>https://oss.jfrog.org/artifactory/libs-release/</url>
         </repository>
+        <repository>
+            <id>javacord-snapshot</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -51,7 +55,7 @@
         <dependency>
             <groupId>org.javacord</groupId>
             <artifactId>javacord</artifactId>
-            <version>3.4.0</version>
+            <version>3.5.1-SNAPSHOT</version>
             <type>pom</type>
         </dependency>
         <dependency>
