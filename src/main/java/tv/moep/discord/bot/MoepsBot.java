@@ -28,10 +28,18 @@ import org.javacord.api.entity.permission.PermissionsBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.team.TeamMember;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.interaction.SlashCommand;
+import org.javacord.api.interaction.SlashCommandBuilder;
+import org.javacord.api.interaction.SlashCommandInteraction;
+import org.javacord.api.interaction.SlashCommandOption;
+import org.javacord.api.interaction.SlashCommandOptionBuilder;
+import org.javacord.api.interaction.SlashCommandOptionType;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
+import tv.moep.discord.bot.commands.DiscordSender;
 import tv.moep.discord.bot.commands.ListCommand;
 import tv.moep.discord.bot.commands.RandomCommand;
+import tv.moep.discord.bot.commands.SlashCommandSender;
 import tv.moep.discord.bot.managers.InviteManager;
 import tv.moep.discord.bot.managers.JoinLeaveManager;
 import tv.moep.discord.bot.managers.MessageManager;
@@ -118,11 +126,11 @@ public class MoepsBot {
         loadConfig();
         registerCommand("reload", Permission.OPERATOR, (sender, args) -> {
             loadConfig();
-            sender.sendMessage("Config reloaded!");
+            sender.sendReply("Config reloaded!");
             return true;
         });
         registerCommand("stop", Permission.OPERATOR, (sender, args) -> {
-            sender.sendMessage("Stopping " + NAME + " v" + VERSION);
+            sender.sendReply("Stopping " + NAME + " v" + VERSION);
             notifyOperators("Shutdown triggered by " + sender.getName() + " (" + NAME + " v" + VERSION + ")");
             synchronized (MoepsBot.this) {
                 this.notifyAll();
@@ -259,6 +267,38 @@ public class MoepsBot {
         for (String alias : command.getAliases()) {
             commands.putIfAbsent(alias, command);
         }
+        // register slash command
+        SlashCommandBuilder builder = SlashCommand.with(command.getName(), command.getUsage())
+                .setEnabledInDms(true);
+        switch (command.getPermission()) {
+            case USER, OPERATOR -> builder.setDefaultEnabledForEveryone();
+            case ADMIN, OWNER -> builder.setDefaultEnabledForPermissions(PermissionType.ADMINISTRATOR);
+        }
+        if (!command.getSubCommands().isEmpty()) {
+            SlashCommandOptionBuilder optionBuilder = new SlashCommandOptionBuilder()
+                    .setType(SlashCommandOptionType.STRING)
+                    .setName("subcommand")
+                    .setDescription("Sub commands of this command")
+                    .setAutocompletable(true);
+            for (Map.Entry<String, Command> entry : command.getSubCommands().entrySet()) {
+                optionBuilder.addChoice(entry.getValue().getName(), entry.getKey());
+            }
+            optionBuilder.addOption(SlashCommandOption.create(SlashCommandOptionType.STRING, "arguments", "Sub command arguments"));
+            builder.addOption(optionBuilder.build());
+        } else {
+            builder.addOption(SlashCommandOption.create(SlashCommandOptionType.STRING, "arguments", command.getUsage()));
+        }
+        discordApi.addSlashCommandCreateListener(event -> {
+            SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+            if (interaction.getCommandName().equals(command.getName())) {
+                List<String> arguments = new ArrayList<>();
+                interaction.getOptionStringValueByName("subcommand").ifPresent(arguments::add);
+                interaction.getOptionStringValueByName("arguments").ifPresent(arguments::add);
+
+                command.execute((T) new SlashCommandSender(this, interaction), arguments.toArray(new String[0]));
+            }
+        });
+        builder.createGlobal(discordApi);
         return command;
     }
 
@@ -280,7 +320,8 @@ public class MoepsBot {
         sender.confirm();
 
         if (!command.runCommand(sender, Arrays.copyOfRange(args, 1, args.length))) {
-            sender.sendMessage("Usage: " + command.getName() + " " + command.getUsage());
+            sender.removeSource();
+            sender.sendReply("Usage: " + command.getName() + " " + command.getUsage());
         }
         return true;
     }

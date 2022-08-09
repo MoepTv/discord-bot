@@ -27,6 +27,7 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.util.NonThrowingAutoCloseable;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
+import tv.moep.discord.bot.commands.ChannelMessageSender;
 import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.util.ArrayList;
@@ -71,7 +72,7 @@ public class PrivateConversationManager extends Manager {
             }
 
             if (event.getReadableMessageContent().startsWith("!")
-                    && moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), event.getReadableMessageContent().substring(1))) {
+                    && moepsBot.runCommand(new ChannelMessageSender(moepsBot, event.getMessage()), event.getReadableMessageContent().substring(1))) {
                 return;
             }
 

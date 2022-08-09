@@ -24,6 +24,7 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
+import tv.moep.discord.bot.commands.ChannelMessageSender;
 import tv.moep.discord.bot.commands.DiscordSender;
 
 import java.time.Instant;
@@ -59,14 +60,14 @@ public class TextChannelManager extends Manager {
 
             boolean foundCommand = false;
 
-            if (has(event.getServerTextChannel().get(), "commands")) {
+            if (event.getMessage().getAuthor().isUser() && has(event.getServerTextChannel().get(), "commands")) {
                 String message = event.getMessageContent();
                 if (moepsBot.getConfig().getBoolean("debug")) {
                     MoepsBot.log(Level.INFO, event.getMessage().getAuthor().getDiscriminatedName() + ": " + message);
                 }
                 String commandPrefix = getString(event.getServerTextChannel().get(), "command-prefix", "!");
                 if (message.startsWith(commandPrefix)) {
-                    foundCommand = moepsBot.runCommand(new DiscordSender(moepsBot, event.getMessage()), message.substring(commandPrefix.length()).trim());
+                    foundCommand = moepsBot.runCommand(new ChannelMessageSender(moepsBot, event.getMessage()), message.substring(commandPrefix.length()).trim());
                 }
             }
 

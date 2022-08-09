@@ -99,15 +99,15 @@ public class RoleManager extends Manager {
                     }
                     if (args.length > 0) {
                         if (updateRoles(((DiscordSender) sender).getUser(), type, String.join(" ", args), ((DiscordSender) sender).getServer())) {
-                            sender.sendMessage("Set role for `" + String.join(" ", args) + "`");
+                            sender.sendReply("Set role for `" + String.join(" ", args) + "`");
                         } else {
-                            sender.sendMessage("No role for `" + String.join(" ", args) + "` found!");
+                            sender.sendReply("No role for `" + String.join(" ", args) + "` found!");
                         }
                         return true;
                     }
                     return false;
                 }
-                sender.sendMessage("Can only be run by a discord user!");
+                sender.sendReply("Can only be run by a discord user!");
                 return true;
             });
         }

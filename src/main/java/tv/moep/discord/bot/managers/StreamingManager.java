@@ -92,11 +92,11 @@ public class StreamingManager extends Manager {
         Command<DiscordSender> streamCommand = moepsBot.registerCommand("stream [list|setoffline [<user>]]", Permission.ADMIN, (sender, args) -> false);
         streamCommand.registerSubCommand("list", ((sender, args) -> {
             if (streams.size() > 0) {
-                sender.sendMessage("Live channels:\n" + streams.entrySet().stream()
+                sender.sendReply("Live channels:\n" + streams.entrySet().stream()
                         .map(e -> e.getKey() + ": " + e.getValue().getGame() + " - " + e.getValue().getTitle() + " - <" + e.getValue().getUrl() + ">")
                         .collect(Collectors.joining("\n")));
             } else {
-                sender.sendMessage("No stream live?");
+                sender.sendReply("No stream live?");
             }
             return true;
         }));
@@ -104,28 +104,28 @@ public class StreamingManager extends Manager {
             if (args.length == 0) {
                 StreamData streamData = getStreamData(sender.getUser());
                 if (streamData == null) {
-                    sender.sendMessage("You are not online?");
+                    sender.sendReply("You are not online?");
                     return true;
                 }
 
                 onOffline(sender.getUser(), sender.getUser().getDiscriminatedName());
-                sender.sendMessage("Set you to offline! Was streaming " + streamData.getGame() + " - " + streamData.getTitle() + " - <" + streamData.getUrl() + ">");
+                sender.sendReply("Set you to offline! Was streaming " + streamData.getGame() + " - " + streamData.getTitle() + " - <" + streamData.getUrl() + ">");
                 return true;
             } else if (args.length == 1) {
                 User user = moepsBot.getUser(args[0]);
                 if (user == null || !user.getMutualServers().contains(sender.getServer())) {
-                    sender.sendMessage("The user `" + args[0] + "` wasn't found?");
+                    sender.sendReply("The user `" + args[0] + "` wasn't found?");
                     return true;
                 }
 
                 StreamData streamData = getStreamData(user);
                 if (streamData == null) {
-                    sender.sendMessage(user.getDiscriminatedName() + " is not online?");
+                    sender.sendReply(user.getDiscriminatedName() + " is not online?");
                     return true;
                 }
 
                 onOffline(user, user.getDiscriminatedName());
-                sender.sendMessage("Set " + user.getDiscriminatedName() + " to offline! Was streaming " + streamData.getGame() + " - " + streamData.getTitle() + " - <" + streamData.getUrl() + ">");
+                sender.sendReply("Set " + user.getDiscriminatedName() + " to offline! Was streaming " + streamData.getGame() + " - " + streamData.getTitle() + " - <" + streamData.getUrl() + ">");
                 return true;
             }
             return false;

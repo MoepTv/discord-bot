@@ -33,6 +33,7 @@ import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Permission;
 import tv.moep.discord.bot.Utils;
 import tv.moep.discord.bot.commands.Command;
+import tv.moep.discord.bot.commands.CommandSender;
 import tv.moep.discord.bot.commands.DiscordSender;
 import tv.moep.discord.bot.commands.MessageReaction;
 
@@ -72,7 +73,7 @@ public class VoiceChannelManager extends Manager {
                         amount++;
                     }
                 }
-                moveRequest.getCommandMessage().delete();
+                moveRequest.getCommandSender().removeSource();
                 int finalAmount = amount;
                 ServerVoiceChannel finalVoiceChannel = voiceChannel;
                 moveRequest.getAnswerFuture().thenAccept(m -> {
@@ -111,12 +112,12 @@ public class VoiceChannelManager extends Manager {
                 if (voiceChannel.isPresent()) {
                     moveRequests.put(sender.getUser().getId(), new MoveRequest(
                             voiceChannel.get(),
-                            sender.getMessage(),
+                            sender,
                             sender.sendMessage("Voice channel move request from " + voiceChannel.get().getName() + " valid for 1 minute!")
                     ));
                 } else {
-                    sender.getMessage().delete();
-                    sender.sendMessage("You are not connected to a voice channel in this server?");
+                    sender.removeSource();
+                    sender.sendReply("You are not connected to a voice channel in this server?");
                 }
             }
             return true;
@@ -165,12 +166,12 @@ public class VoiceChannelManager extends Manager {
 
     private class MoveRequest {
         private final ServerVoiceChannel voiceChannel;
-        private final Message commandMessage;
+        private final CommandSender commandSender;
         private final CompletableFuture<Message> answerFuture;
 
-        private MoveRequest(ServerVoiceChannel voiceChannel, Message commandMessage, CompletableFuture<Message> answerFuture) {
+        private MoveRequest(ServerVoiceChannel voiceChannel, CommandSender commandSender, CompletableFuture<Message> answerFuture) {
             this.voiceChannel = voiceChannel;
-            this.commandMessage = commandMessage;
+            this.commandSender = commandSender;
             this.answerFuture = answerFuture;
         }
 
@@ -178,8 +179,8 @@ public class VoiceChannelManager extends Manager {
             return voiceChannel;
         }
 
-        public Message getCommandMessage() {
-            return commandMessage;
+        public CommandSender getCommandSender() {
+            return commandSender;
         }
 
         public CompletableFuture<Message> getAnswerFuture() {

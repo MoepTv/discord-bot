@@ -75,7 +75,8 @@ public class RandomCommand extends Command<DiscordSender> {
                     ServerVoiceChannel channel = voiceChannel.get();
                     Collection<User> connected = channel.getConnectedUsers().stream().filter(u -> !u.isBot()).collect(Collectors.toList());
                     if (connected.size() > options.size()) {
-                        sender.sendMessage("More users connected to the voice channel " + channel.getName() + " (" + connected.size() + ") than available options specified! (" + options.size() + ")");
+                        sender.removeSource();
+                        sender.sendReply("More users connected to the voice channel " + channel.getName() + " (" + connected.size() + ") than available options specified! (" + options.size() + ")");
                     } else {
                         for (User user : connected) {
                             String option = options.remove(0);
@@ -89,18 +90,18 @@ public class RandomCommand extends Command<DiscordSender> {
                                     ).whenComplete((m, e) -> {
                                         if (m == null) {
                                             if (e != null) {
-                                                sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! " + e.getMessage() + ".");
+                                                sender.sendReply("Unable to send message to " + user.getDisplayName(server) + "! " + e.getMessage() + ".");
                                             } else {
-                                                sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
+                                                sender.sendReply("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
                                             }
                                             sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
                                         }
                                     });
                                     return;
                                 } else if (ex != null) {
-                                    sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! " + ex.getMessage() + ".");
+                                    sender.sendReply("Unable to send message to " + user.getDisplayName(server) + "! " + ex.getMessage() + ".");
                                 } else {
-                                    sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
+                                    sender.sendReply("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
                                 }
                                 sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
                             });
@@ -111,6 +112,7 @@ public class RandomCommand extends Command<DiscordSender> {
                 }
             }
             if (!found) {
+                sender.removeSource();
                 sender.sendMessage("You are not connected to a voice channel that I have access to?");
             }
         } else {

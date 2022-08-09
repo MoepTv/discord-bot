@@ -59,7 +59,8 @@ public abstract class Command<T extends CommandSender> {
 
     public boolean runCommand(T sender, String[] args) {
         if (!sender.hasPermission(getPermission())) {
-            sender.sendMessage("You need to at least be an " + getPermission() + " to run this command!");
+            sender.removeSource();
+            sender.sendReply("You need to at least be an " + getPermission() + " to run this command!");
             return true;
         }
 

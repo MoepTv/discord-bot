@@ -29,9 +29,19 @@ public interface CommandSender<M> {
 
     CompletableFuture<M> sendMessage(String title, String message);
 
+    default void sendReply(String message) {
+        sendMessage(message);
+    }
+
+    default void sendReply(String title, String message) {
+        sendMessage(title, message);
+    }
+
     boolean hasPermission(Permission permission);
 
     void confirm();
 
     String getName();
+
+    void removeSource();
 }
