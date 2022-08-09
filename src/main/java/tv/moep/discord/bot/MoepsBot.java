@@ -26,6 +26,7 @@ import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.PermissionsBuilder;
 import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.team.TeamMember;
 import org.javacord.api.entity.user.User;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
@@ -148,7 +149,16 @@ public class MoepsBot {
 
     private void notifyOperators(String message) {
         List<CompletableFuture<User>> operators = new ArrayList<>();
-        operators.add(getDiscordApi().getOwner());
+        getDiscordApi().getOwner().ifPresent(cf -> operators.add(cf));
+        try {
+            getDiscordApi().requestTeam().get().ifPresent(team -> {
+                for (TeamMember teamMember : team.getTeamMembers()){
+                    operators.add(teamMember.requestUser());
+                }
+            });
+        } catch (ExecutionException | InterruptedException e) {
+            log(Level.SEVERE, e.getMessage());
+        }
         for (String id : getConfig().getStringList("discord.operators")) {
             if (id.contains("#")) {
                 getDiscordApi().getCachedUserByDiscriminatedName(id).ifPresent(u -> operators.add(CompletableFuture.completedFuture(u)));
@@ -189,7 +199,7 @@ public class MoepsBot {
                             new PermissionsBuilder()
                                     .setAllowed(
                                             PermissionType.MANAGE_MESSAGES,
-                                            PermissionType.READ_MESSAGES,
+                                            PermissionType.READ_MESSAGE_HISTORY,
                                             PermissionType.SEND_MESSAGES,
                                             PermissionType.ADD_REACTIONS,
                                             PermissionType.MANAGE_ROLES,
