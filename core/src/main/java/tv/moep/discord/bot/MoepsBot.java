@@ -36,7 +36,6 @@ import org.javacord.api.interaction.SlashCommandOptionBuilder;
 import org.javacord.api.interaction.SlashCommandOptionType;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
-import tv.moep.discord.bot.commands.DiscordSender;
 import tv.moep.discord.bot.commands.ListCommand;
 import tv.moep.discord.bot.commands.RandomCommand;
 import tv.moep.discord.bot.commands.SlashCommandSender;
@@ -126,12 +125,12 @@ public class MoepsBot {
 
     public MoepsBot() {
         loadConfig();
-        registerCommand("reload", Permission.OPERATOR, (sender, args) -> {
+        registerCommand("reload", Permission.OPERATOR, false, (sender, args) -> {
             loadConfig();
             sender.sendReply("Config reloaded!");
             return true;
         });
-        registerCommand("stop", Permission.OPERATOR, (sender, args) -> {
+        registerCommand("stop", Permission.OPERATOR, false, (sender, args) -> {
             sender.sendReply("Stopping " + NAME + " v" + VERSION);
             notifyOperators("Shutdown triggered by " + sender.getName() + " (" + NAME + " v" + VERSION + ")");
             synchronized (MoepsBot.this) {
@@ -260,12 +259,18 @@ public class MoepsBot {
     }
 
     public <T extends CommandSender> Command<T> registerCommand(String usage, Permission permission, BiFunction<T, String[], Boolean> execute, String... aliases) {
-        return registerCommand(new Command<T>(usage, permission, aliases) {
+        return registerCommand(usage, permission, true, execute, aliases);
+    }
+
+    public <T extends CommandSender> Command<T> registerCommand(String usage, Permission permission, boolean requiresServer, BiFunction<T, String[], Boolean> execute, String... aliases) {
+        Command<T> command = new Command<T>(usage, permission, aliases) {
             @Override
             public boolean execute(T sender, String[] args) {
                 return execute.apply(sender, args);
             }
-        });
+        };
+        command.setRequiresServer(requiresServer);
+        return registerCommand(command);
     }
 
     public <T extends CommandSender>Command<T> registerCommand(Command<T> command) {
@@ -275,7 +280,7 @@ public class MoepsBot {
         }
         // register slash command
         SlashCommandBuilder builder = SlashCommand.with(command.getName(), command.getUsage())
-                .setEnabledInDms(true);
+                .setEnabledInDms(!command.doesRequireServer());
         switch (command.getPermission()) {
             case USER, OPERATOR -> builder.setDefaultEnabledForEveryone();
             case ADMIN, OWNER -> builder.setDefaultEnabledForPermissions(PermissionType.ADMINISTRATOR);

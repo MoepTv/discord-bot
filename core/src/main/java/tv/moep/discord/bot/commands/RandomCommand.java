@@ -42,6 +42,7 @@ public class RandomCommand extends Command<DiscordSender> {
     public RandomCommand(MoepsBot bot) {
         super("random [--voice|-v] <option 1>|option 2>|...");
         this.bot = bot;
+        setRequiresServer(false);
     }
 
     @Override

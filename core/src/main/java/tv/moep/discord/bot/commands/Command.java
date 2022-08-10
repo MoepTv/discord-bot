@@ -32,6 +32,7 @@ public abstract class Command<T extends CommandSender> {
     private final String usage;
     private final Permission permission;
     private final List<String> aliases;
+    private boolean requiresServer = true;
     private Map<String, Command> subCommands = new HashMap<>();
 
     public Command(String usage, String... aliases) {
@@ -119,5 +120,13 @@ public abstract class Command<T extends CommandSender> {
 
     public Map<String, Command> getSubCommands() {
         return subCommands;
+    }
+
+    public boolean doesRequireServer() {
+        return requiresServer;
+    }
+
+    public void setRequiresServer(boolean requiresServer) {
+        this.requiresServer = requiresServer;
     }
 }
