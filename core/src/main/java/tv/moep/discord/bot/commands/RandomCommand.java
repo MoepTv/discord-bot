@@ -78,6 +78,8 @@ public class RandomCommand extends Command<DiscordSender> {
                         sender.removeSource();
                         sender.sendReply("More users connected to the voice channel " + channel.getName() + " (" + connected.size() + ") than available options specified! (" + options.size() + ")");
                     } else {
+                        sender.removeSource();
+                        sender.sendReply("Sending one of " + options.size() + " random options to " + connected.size() + " users in your voice channel");
                         for (User user : connected) {
                             String option = options.remove(0);
                             user.openPrivateChannel().whenComplete((c, ex) -> {
@@ -99,9 +101,9 @@ public class RandomCommand extends Command<DiscordSender> {
                                     });
                                     return;
                                 } else if (ex != null) {
-                                    sender.sendReply("Unable to send message to " + user.getDisplayName(server) + "! " + ex.getMessage() + ".");
+                                    sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! " + ex.getMessage() + ".");
                                 } else {
-                                    sender.sendReply("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
+                                    sender.sendMessage("Unable to send message to " + user.getDisplayName(server) + "! Channel could not be opened!");
                                 }
                                 sender.sendNaturalMessage(user.getDisplayName(server) + "'s option was ||" + option + "||");
                             });
@@ -113,10 +115,10 @@ public class RandomCommand extends Command<DiscordSender> {
             }
             if (!found) {
                 sender.removeSource();
-                sender.sendMessage("You are not connected to a voice channel that I have access to?");
+                sender.sendReply("You are not connected to a voice channel that I have access to?");
             }
         } else {
-            sender.sendMessage(options.get(new Random().nextInt(options.size())));
+            sender.sendReply(options.get(new Random().nextInt(options.size())));
         }
         return true;
     }
