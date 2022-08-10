@@ -47,6 +47,7 @@ import tv.moep.discord.bot.managers.PrivateConversationManager;
 import tv.moep.discord.bot.managers.RoleManager;
 import tv.moep.discord.bot.managers.StreamingManager;
 import tv.moep.discord.bot.managers.TextChannelManager;
+import tv.moep.discord.bot.managers.UserChangeManager;
 import tv.moep.discord.bot.managers.VoiceChannelManager;
 
 import java.io.File;
@@ -91,6 +92,7 @@ public class MoepsBot {
     private VoiceChannelManager voiceChannelManager;
     private PrivateConversationManager privateConversationManager;
     private JoinLeaveManager joinLeaveManager;
+    private UserChangeManager userChangeManager;
     private TextChannelManager textChannelManager;
     private MessageManager messageManager;
     private RoleManager roleManager;
@@ -201,6 +203,7 @@ public class MoepsBot {
             streamingManager.reload();
             privateConversationManager = new PrivateConversationManager(this);
             joinLeaveManager = new JoinLeaveManager(this);
+            userChangeManager = new UserChangeManager(this);
             textChannelManager = new TextChannelManager(this);
             messageManager = new MessageManager(this);
             roleManager = new RoleManager(this);
@@ -386,6 +389,10 @@ public class MoepsBot {
 
     public JoinLeaveManager getJoinLeaveManager() {
         return joinLeaveManager;
+    }
+
+    public UserChangeManager getUserChangeManager() {
+        return userChangeManager;
     }
 
     public TextChannelManager getTextChannelManager() {
