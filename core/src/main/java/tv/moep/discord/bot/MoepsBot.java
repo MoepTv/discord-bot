@@ -23,6 +23,7 @@ import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
+import org.javacord.api.entity.Nameable;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.PermissionsBuilder;
 import org.javacord.api.entity.server.Server;
@@ -71,6 +72,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class MoepsBot {
     private static final DateFormat TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ");
@@ -141,6 +143,7 @@ public class MoepsBot {
         registerCommand(new ListCommand(this));
         registerCommand(new RandomCommand(this));
         notifyOperators("Started " + NAME + " v" + VERSION);
+        log(Level.INFO, "Joined the servers " + discordApi.getServers().stream().map(Nameable::getName).collect(Collectors.joining(", ")));
         synchronized (MoepsBot.this) {
             try {
                 wait();
@@ -213,6 +216,7 @@ public class MoepsBot {
                                     .setAllowed(
                                             PermissionType.MANAGE_MESSAGES,
                                             PermissionType.READ_MESSAGE_HISTORY,
+                                            PermissionType.VIEW_CHANNEL,
                                             PermissionType.SEND_MESSAGES,
                                             PermissionType.ADD_REACTIONS,
                                             PermissionType.MANAGE_ROLES,
