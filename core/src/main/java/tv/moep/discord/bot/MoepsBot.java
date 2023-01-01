@@ -24,6 +24,7 @@ import com.typesafe.config.ConfigFactory;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.Nameable;
+import org.javacord.api.entity.intent.Intent;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.permission.PermissionsBuilder;
 import org.javacord.api.entity.server.Server;
@@ -194,7 +195,15 @@ public class MoepsBot {
         }
         config = getConfig("bot");
         try {
-            discordApi = new DiscordApiBuilder().setToken(getConfig().getString("discord.token")).setAllIntents().login().join();
+            discordApi = new DiscordApiBuilder().setToken(getConfig().getString("discord.token"))
+                    .setAllIntentsExcept(
+                            Intent.DIRECT_MESSAGE_TYPING,
+                            Intent.DIRECT_MESSAGE_TYPING,
+                            Intent.GUILD_WEBHOOKS,
+                            Intent.GUILD_INTEGRATIONS,
+                            Intent.GUILD_BANS
+                    )
+                    .login().join();
 
             scheduler = Executors.newScheduledThreadPool(1);
 
