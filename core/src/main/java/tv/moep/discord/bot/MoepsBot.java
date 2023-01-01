@@ -194,7 +194,7 @@ public class MoepsBot {
         }
         config = getConfig("bot");
         try {
-            discordApi = new DiscordApiBuilder().setToken(getConfig().getString("discord.token")).login().join();
+            discordApi = new DiscordApiBuilder().setToken(getConfig().getString("discord.token")).setAllIntents().login().join();
 
             scheduler = Executors.newScheduledThreadPool(1);
 
@@ -307,8 +307,8 @@ public class MoepsBot {
             SlashCommandInteraction interaction = event.getSlashCommandInteraction();
             if (interaction.getCommandName().equals(command.getName())) {
                 List<String> arguments = new ArrayList<>();
-                interaction.getOptionStringValueByName("subcommand").ifPresent(arguments::add);
-                interaction.getOptionStringValueByName("arguments").ifPresent(arguments::add);
+                interaction.getArgumentStringValueByName("subcommand").ifPresent(arguments::add);
+                interaction.getArgumentStringValueByName("arguments").ifPresent(arguments::add);
 
                 command.execute((T) new SlashCommandSender(this, interaction), arguments.toArray(new String[0]));
             }

@@ -126,7 +126,7 @@ public class Utils {
                     JsonObject contentJson = new JsonObject();
                     contentJson.addProperty("format", "text");
                     try {
-                        contentJson.addProperty("value", readInputStream(a.downloadAsInputStream()));
+                        contentJson.addProperty("value", readInputStream(a.asInputStream()));
                         fileJson.add("content", contentJson);
 
                         files.add(fileJson);
