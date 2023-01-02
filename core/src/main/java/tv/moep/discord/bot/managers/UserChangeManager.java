@@ -34,6 +34,7 @@ public class UserChangeManager extends Manager {
         super(moepsBot, "user-change");
 
         moepsBot.getDiscordApi().addUserChangeNicknameListener(event -> {
+            if (event.getUser().isBot()) return;
             handleChange(event.getServer(), "nick-name", event.getUser(), event.getOldNickname().orElse("'" + event.getUser().getName() + "' (original)"), event.getNewNickname().orElse("'" + event.getUser().getName() + "' (original)"));
         });
 
