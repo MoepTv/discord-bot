@@ -65,6 +65,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -73,6 +76,7 @@ public class StreamingManager extends Manager {
     private boolean markChannel;
     private String markerPrefix;
     private String markerSuffix;
+    private String redirectUrl;
     private String oAuthToken = "";
     private String username = null;
     private TwitchClient twitchClient = null;
@@ -89,6 +93,14 @@ public class StreamingManager extends Manager {
 
     public StreamingManager(MoepsBot moepsBot) {
         super(moepsBot, "streaming");
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (twitchClient != null) {
+                    testClientConnection();
+                }
+            }
+        }, TimeUnit.HOURS.toMillis(1), TimeUnit.HOURS.toMillis(1));
         Command<DiscordSender> streamCommand = moepsBot.registerCommand("stream [list|setoffline [<user>]]", Permission.ADMIN, (sender, args) -> false);
         streamCommand.registerSubCommand("list", ((sender, args) -> {
             if (streams.size() > 0) {
@@ -142,7 +154,7 @@ public class StreamingManager extends Manager {
                 if (setupTwitchClient) {
                     TwitchClientBuilder twitchClientBuilder = TwitchClientBuilder.builder()
                             .withEnableHelix(true);
-                    String redirectUrl = getConfig().hasPath("twitch.client.redirecturl") ? getConfig().getString("twitch.client.redirecturl") : "";
+                    redirectUrl = getConfig().hasPath("twitch.client.redirecturl") ? getConfig().getString("twitch.client.redirecturl") : "";
                     if (getConfig().hasPath("twitch.client.oauth")) {
                         oAuthToken = getConfig().getString("twitch.client.oauth");
                     }
@@ -176,15 +188,7 @@ public class StreamingManager extends Manager {
                     }
                     twitchClient = twitchClientBuilder.build();
                     // Test client
-                    try {
-                        List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList("MoepsBot")).execute().getUsers();
-                        if (userList.isEmpty()) {
-                            log(Level.WARNING, "Unable to query API?");
-                        }
-                    } catch (Exception e) {
-                        log(Level.SEVERE, "OAuth token might be invalid! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=" + (username != null ? "chat:edit%20chat:read%20whispers:read%20whispers:edit" : ""));
-                        throw e;
-                    }
+                    testClientConnection();
                     try {
                         if (username != null) {
                             twitchClient.getChat().joinChannel(username);
@@ -352,6 +356,20 @@ public class StreamingManager extends Manager {
                 }
             }
         });
+    }
+
+    private void testClientConnection() {
+        try {
+            List<com.github.twitch4j.helix.domain.User> userList = twitchClient.getHelix().getUsers(oAuthToken, null, Collections.singletonList("MoepsBot")).execute().getUsers();
+            if (userList.isEmpty()) {
+                log(Level.WARNING, "Unable to query API?");
+            }
+        } catch (Exception e) {
+            String message = e.getClass().getSimpleName() + " occurred! " + e.getMessage() + " OAuth token might be invalid! Please get it from https://id.twitch.tv/oauth2/authorize?client_id=" + getConfig().getString("twitch.client.id") + "&redirect_uri=" + redirectUrl + "&response_type=token&scope=" + (username != null ? "chat:edit%20chat:read%20whispers:read%20whispers:edit" : "");
+            log(Level.SEVERE, message);
+            notifyOperators(message);
+            throw e;
+        }
     }
 
     private boolean isStreaming(String discordId) {

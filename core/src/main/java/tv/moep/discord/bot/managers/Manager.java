@@ -116,6 +116,10 @@ public abstract class Manager {
         return def;
     }
 
+    protected void notifyOperators(String message) {
+        getMoepsBot().notifyOperators("[" + name + "] " + message);
+    }
+
     protected void log(Level level, String message) {
         MoepsBot.log(level, "[" + name + "] " + message);
     }

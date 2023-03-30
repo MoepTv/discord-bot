@@ -160,7 +160,7 @@ public class MoepsBot {
         System.exit(0);
     }
 
-    private void notifyOperators(String message) {
+    public void notifyOperators(String message) {
         List<CompletableFuture<User>> operators = new ArrayList<>();
         getDiscordApi().getOwner().ifPresent(cf -> operators.add(cf));
         try {
