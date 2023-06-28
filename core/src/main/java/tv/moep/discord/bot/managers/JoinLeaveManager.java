@@ -64,6 +64,7 @@ public class JoinLeaveManager extends Manager {
                         if (!messages.isEmpty()) {
                             channel.sendMessage(Utils.replace(
                                     messages.get(MoepsBot.RANDOM.nextInt(messages.size())),
+                                    "name", event.getUser().getName(),
                                     "username", event.getUser().getDiscriminatedName(),
                                     "usermention", event.getUser().getNicknameMentionTag(),
                                     "nickname", event.getUser().getDisplayName(event.getServer()),
