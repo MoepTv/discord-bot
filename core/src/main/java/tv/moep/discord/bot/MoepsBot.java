@@ -213,7 +213,11 @@ public class MoepsBot {
             if (streamingManager == null) {
                 streamingManager = new StreamingManager(this);
             }
-            streamingManager.reload();
+            try {
+                streamingManager.reload();
+            } catch (Exception e) {
+                log(Level.SEVERE, "Error while reloading streaming manager!", e);
+            }
             privateConversationManager = new PrivateConversationManager(this);
             joinLeaveManager = new JoinLeaveManager(this);
             userChangeManager = new UserChangeManager(this);
