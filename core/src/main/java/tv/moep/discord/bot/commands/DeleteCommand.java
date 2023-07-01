@@ -54,7 +54,6 @@ public class DeleteCommand extends Command<DiscordSender>  {
         if ("confirm".equalsIgnoreCase(args[0])) {
             Set<String> messages = deletionQueue.getIfPresent(sender.getName());
             if (messages != null) {
-                sender.sendReply("Starting to delete " + messages.size() + " messages!");
                 Message.delete(bot.getDiscordApi(), sender.getChannel().getIdAsString(), messages.toArray(new String[0])).whenComplete((v, e) -> {
                     if (e != null) {
                         sender.sendMessage("Error while trying to delete " + messages.size() + "! " + e.getMessage());
