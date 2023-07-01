@@ -18,7 +18,7 @@ public class SlashCommandSender extends DiscordSender {
     private boolean onlySender = false;
 
     public SlashCommandSender(MoepsBot bot, SlashCommandInteraction interaction) {
-        super(bot, interaction.getUser(), interaction.getServer().orElse(null));
+        super(bot, interaction.getUser(), interaction.getChannel().orElse(null), interaction.getServer().orElse(null));
         this.interaction = interaction;
     }
 
@@ -95,7 +95,12 @@ public class SlashCommandSender extends DiscordSender {
 
     @Override
     public void confirm() {
-        interaction.createImmediateResponder().append(MessageReaction.CONFIRM).respond();
+        InteractionImmediateResponseBuilder respose = interaction.createImmediateResponder()
+                .append(MessageReaction.CONFIRM);
+        if (onlySender) {
+            respose.setFlags(MessageFlag.EPHEMERAL);
+        }
+        respose.respond();
     }
 
     @Override

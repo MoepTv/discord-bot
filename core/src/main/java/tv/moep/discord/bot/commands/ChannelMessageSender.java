@@ -22,7 +22,6 @@ import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import tv.moep.discord.bot.MoepsBot;
-import tv.moep.discord.bot.Permission;
 import tv.moep.discord.bot.Utils;
 
 import java.util.concurrent.CompletableFuture;
@@ -31,7 +30,7 @@ public class ChannelMessageSender extends DiscordSender {
     private final Message message;
 
     public ChannelMessageSender(MoepsBot bot, Message message) {
-        super(bot, message.getUserAuthor().orElse(null), message.getServer().orElse(null));
+        super(bot, message.getUserAuthor().orElse(null), message.getChannel(), message.getServer().orElse(null));
         this.message = message;
     }
 

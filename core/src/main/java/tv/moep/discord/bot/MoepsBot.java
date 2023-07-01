@@ -38,6 +38,7 @@ import org.javacord.api.interaction.SlashCommandOptionBuilder;
 import org.javacord.api.interaction.SlashCommandOptionType;
 import tv.moep.discord.bot.commands.Command;
 import tv.moep.discord.bot.commands.CommandSender;
+import tv.moep.discord.bot.commands.DeleteCommand;
 import tv.moep.discord.bot.commands.ListCommand;
 import tv.moep.discord.bot.commands.RandomCommand;
 import tv.moep.discord.bot.commands.SlashCommandSender;
@@ -142,7 +143,8 @@ public class MoepsBot {
             return true;
         });
         registerCommand(new ListCommand(this));
-        registerCommand(new RandomCommand(this));
+        registerCommand(new RandomCommand());
+        registerCommand(new DeleteCommand(this));
         notifyOperators("Started " + NAME + " v" + VERSION);
         log(Level.INFO, "Joined the servers " + discordApi.getServers().stream().map(Nameable::getName).collect(Collectors.joining(", ")));
         synchronized (MoepsBot.this) {

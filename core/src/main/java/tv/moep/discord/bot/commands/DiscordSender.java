@@ -18,6 +18,7 @@ package tv.moep.discord.bot.commands;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -27,11 +28,13 @@ import tv.moep.discord.bot.Permission;
 public abstract class DiscordSender implements CommandSender<Message> {
     private final MoepsBot bot;
     private final User user;
+    private final TextChannel channel;
     private final Server server;
 
-    public DiscordSender(MoepsBot bot, User user, Server server) {
+    public DiscordSender(MoepsBot bot, User user, TextChannel channel, Server server) {
         this.bot = bot;
         this.user = user;
+        this.channel = channel;
         this.server = server;
     }
 
@@ -63,6 +66,10 @@ public abstract class DiscordSender implements CommandSender<Message> {
 
     public Server getServer() {
         return server;
+    }
+
+    public TextChannel getChannel() {
+        return channel;
     }
 
     public User getUser() {

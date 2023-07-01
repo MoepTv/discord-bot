@@ -25,7 +25,6 @@ import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
-import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Utils;
 
 import java.util.Arrays;
@@ -37,11 +36,9 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class RandomCommand extends Command<DiscordSender> {
-    private final MoepsBot bot;
 
-    public RandomCommand(MoepsBot bot) {
+    public RandomCommand() {
         super("random [--voice|-v] <option 1>|option 2>|...");
-        this.bot = bot;
         setRequiresServer(false);
     }
 
