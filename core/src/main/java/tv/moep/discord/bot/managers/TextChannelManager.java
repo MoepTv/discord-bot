@@ -42,7 +42,7 @@ public class TextChannelManager extends Manager {
             Config serverConfig = getConfig(server);
             if (serverConfig != null) {
                 boolean scanServerMessages = serverConfig.hasPath("deleteMessages")
-                        || serverConfig.hasPath("deleteUserMessagess");
+                        || serverConfig.hasPath("deleteUserMessages");
                 for (ServerTextChannel channel : server.getTextChannels()) {
                     if (scanServerMessages
                             || serverConfig.hasPath(channel.getId() + ".deleteMessages")
