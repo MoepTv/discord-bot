@@ -47,7 +47,7 @@ public class TextChannelManager extends Manager {
                     if (scanServerMessages
                             || serverConfig.hasPath(channel.getId() + ".deleteMessages")
                             || serverConfig.hasPath(channel.getId() + ".deleteUserMessages")) {
-                        channel.getMessages(100).thenAccept(ms -> ms.forEach(m -> checkForDeletion(channel, m)));
+                        channel.getMessagesAsStream().forEach(m -> checkForDeletion(channel, m));
                     }
                 }
             }
