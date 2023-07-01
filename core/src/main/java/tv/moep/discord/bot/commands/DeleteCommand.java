@@ -36,7 +36,7 @@ public class DeleteCommand extends Command<DiscordSender>  {
     private final Cache<String, Set<String>> deletionQueue = Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
     public DeleteCommand(MoepsBot bot) {
-        super("confirm|<author> <from> <to>", Permission.ADMIN);
+        super("delete confirm|<author> <from> <to>", Permission.ADMIN);
         this.bot = bot;
     }
 
