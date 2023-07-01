@@ -236,7 +236,7 @@ public class MoepsBot {
                                             PermissionType.EMBED_LINKS)
                                     .build()));
         } catch (CompletionException e) {
-            log(Level.SEVERE, "Error connecting to discord! Is the token correct?");
+            log(Level.SEVERE, "Error connecting to discord! Is the token correct?", e);
         }
     }
 
@@ -318,8 +318,8 @@ public class MoepsBot {
             SlashCommandInteraction interaction = event.getSlashCommandInteraction();
             if (interaction.getCommandName().equals(command.getName())) {
                 List<String> arguments = new ArrayList<>();
-                interaction.getArgumentStringValueByName("subcommand").ifPresent(arguments::add);
-                interaction.getArgumentStringValueByName("arguments").ifPresent(arguments::add);
+                interaction.getArgumentStringValueByName("subcommand").map(s -> s.split(" ")).ifPresent(s -> arguments.addAll(Arrays.asList(s)));
+                interaction.getArgumentStringValueByName("arguments").map(s -> s.split(" ")).ifPresent(s -> arguments.addAll(Arrays.asList(s)));
 
                 SlashCommandSender sender = new SlashCommandSender(this, interaction);
                 runCommand(sender, command, arguments.toArray(new String[0]));

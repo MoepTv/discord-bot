@@ -53,7 +53,6 @@ public class DeleteCommand extends Command<DiscordSender>  {
 
         if ("confirm".equalsIgnoreCase(args[0])) {
             Set<String> messages = deletionQueue.getIfPresent(sender.getName());
-            sender.confirm();
             if (messages != null) {
                 sender.sendReply("Starting to delete " + messages.size() + " messages!");
                 Message.delete(bot.getDiscordApi(), sender.getChannel().getIdAsString(), messages.toArray(new String[0])).whenComplete((v, e) -> {
@@ -78,8 +77,6 @@ public class DeleteCommand extends Command<DiscordSender>  {
 
         try {
             long authorId = Long.parseLong(args[0]);
-            sender.confirm();
-
             sender.getChannel().getMessagesBetween(Long.parseLong(args[1]), Long.parseLong(args[2])).whenComplete((ms, e) -> {
                 if (e != null) {
                     sender.sendReply(e.getMessage());
