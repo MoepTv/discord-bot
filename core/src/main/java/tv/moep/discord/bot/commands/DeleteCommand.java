@@ -24,12 +24,11 @@ import org.javacord.api.entity.message.Message;
 import tv.moep.discord.bot.MoepsBot;
 import tv.moep.discord.bot.Permission;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class DeleteCommand extends Command<DiscordSender>  {
     private final MoepsBot bot;
@@ -54,18 +53,21 @@ public class DeleteCommand extends Command<DiscordSender>  {
 
         if ("confirm".equalsIgnoreCase(args[0])) {
             Set<String> messages = deletionQueue.getIfPresent(sender.getName());
+            sender.confirm();
             if (messages != null) {
-                sender.confirm();
                 sender.sendReply("Starting to delete " + messages.size() + " messages!");
                 Message.delete(bot.getDiscordApi(), sender.getChannel().getIdAsString(), messages.toArray(new String[0])).whenComplete((v, e) -> {
                     if (e != null) {
                         sender.sendMessage("Error while trying to delete " + messages.size() + "! " + e.getMessage());
-                        e.printStackTrace();
+                        MoepsBot.log(Level.SEVERE, e.getMessage(), e);
                     } else {
                         deletionQueue.invalidate(sender.getName());
                         sender.sendReply("Deleted " + messages.size() + " messages!");
+                        MoepsBot.log(Level.INFO, sender.getName() + " deleted " + messages.size() + " messages in channel " + sender.getChannel().getId() + " of " + Optional.ofNullable(sender.getServer()).map(s -> s.getName() + "/" + s.getId()).orElse("pm"));
                     }
                 });
+            } else {
+                sender.sendReply("No message deletion request found to confirm?");
             }
             return true;
         }
@@ -76,9 +78,9 @@ public class DeleteCommand extends Command<DiscordSender>  {
 
         try {
             long authorId = Long.parseLong(args[0]);
+            sender.confirm();
 
             sender.getChannel().getMessagesBetween(Long.parseLong(args[1]), Long.parseLong(args[2])).whenComplete((ms, e) -> {
-                sender.confirm();
                 if (e != null) {
                     sender.sendReply(e.getMessage());
                 } else {

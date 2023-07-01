@@ -321,7 +321,8 @@ public class MoepsBot {
                 interaction.getArgumentStringValueByName("subcommand").ifPresent(arguments::add);
                 interaction.getArgumentStringValueByName("arguments").ifPresent(arguments::add);
 
-                command.execute((T) new SlashCommandSender(this, interaction), arguments.toArray(new String[0]));
+                SlashCommandSender sender = new SlashCommandSender(this, interaction);
+                runCommand(sender, command, arguments.toArray(new String[0]));
             }
         });
         builder.createGlobal(discordApi);
@@ -344,10 +345,15 @@ public class MoepsBot {
         }
 
         sender.confirm();
+        runCommand(sender, command, Arrays.copyOfRange(args, 1, args.length));
+        return true;
+    }
 
-        if (!command.runCommand(sender, Arrays.copyOfRange(args, 1, args.length))) {
+    public boolean runCommand(CommandSender sender, Command command, String[] args) {
+        if (!command.runCommand(sender, args)) {
             sender.removeSource();
             sender.sendReply("Usage: " + command.getName() + " " + command.getUsage());
+            return false;
         }
         return true;
     }
