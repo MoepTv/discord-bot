@@ -72,6 +72,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -193,7 +194,12 @@ public class MoepsBot {
             discordApi.disconnect();
         }
         if (scheduler != null) {
-            scheduler.shutdownNow();
+            scheduler.shutdown();
+            try {
+                scheduler.awaitTermination(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                log(Level.SEVERE, "Error while shutting down scheduler!", e);
+            }
         }
         config = getConfig("bot");
         try {
