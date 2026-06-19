@@ -10,18 +10,18 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>twitch4j-fat</artifactId>
+    <artifactId>jemoji-fat</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>com.github.twitch4j</groupId>
-            <artifactId>twitch4j</artifactId>
+            <groupId>net.fellbaum</groupId>
+            <artifactId>jemoji</artifactId>
         </dependency>
-        <!-- try to keep in sync with twitch4j-common version -->
+        <!-- try to keep in sync with jemoji version -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.22.0</version>
+            <version>3.1.2</version>
         </dependency>
     </dependencies>
 
@@ -43,11 +43,7 @@
                     <relocations>
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
-                            <shadedPattern>tv.moep.discord.twitch4j.jackson</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>okhttp3</pattern>
-                            <shadedPattern>tv.moep.discord.twitch4j.okhttp3</shadedPattern>
+                            <shadedPattern>tv.moep.discord.jemoji.jackson</shadedPattern>
                         </relocation>
                     </relocations>
                     <filters>

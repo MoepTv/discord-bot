@@ -14,8 +14,8 @@
 
     <properties>
         <revision>1.8-SNAPSHOT</revision>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <build.number>${buildNumber}</build.number>
         <application.name>MoepsBot</application.name>
@@ -23,6 +23,7 @@
     </properties>
 
     <modules>
+        <module>jemoji-fat</module>
         <module>twitch4j-fat</module>
         <module>core</module>
     </modules>
@@ -49,13 +50,18 @@
             <dependency>
                 <groupId>com.github.twitch4j</groupId>
                 <artifactId>twitch4j</artifactId>
-                <version>1.14.0</version>
+                <version>1.26.0</version>
             </dependency>
             <dependency>
                 <groupId>org.javacord</groupId>
                 <artifactId>javacord</artifactId>
                 <version>3.8.0</version>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>net.fellbaum</groupId>
+                <artifactId>jemoji</artifactId>
+                <version>2.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.typesafe</groupId>

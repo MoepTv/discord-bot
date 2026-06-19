@@ -21,8 +21,10 @@ package tv.moep.discord.bot.managers;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import net.fellbaum.jemoji.EmojiManager;
 import org.javacord.api.entity.activity.Activity;
 import org.javacord.api.entity.activity.ActivityType;
+import org.javacord.api.entity.emoji.Emoji;
 import org.javacord.api.entity.permission.Role;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -58,30 +60,20 @@ public class RoleManager extends Manager {
         }
 
         moepsBot.getDiscordApi().addReactionAddListener(event -> {
-            if (event.getUser().isPresent() && event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
-                Config config = getConfig(event.getServer().get());
-                String path = "reactions." + event.getMessageId() + "." + event.getEmoji().asCustomEmoji().get().getName();
-                if (config != null && config.hasPath(path)) {
-                    event.getServer().get()
-                            .getRoleById(config.getLong(path))
-                            .filter(r -> !r.hasUser(event.getUser().get()))
-                            .ifPresent(r -> event.getUser().get().addRole(r)
+            if (event.getUser().isPresent() && event.getServer().isPresent()) {
+                getEmojiRole(event.getServer().get(), event.getMessageId(), event.getEmoji())
+                        .filter(r -> !r.hasUser(event.getUser().get()))
+                        .ifPresent(r -> event.getUser().get().addRole(r)
                                     .thenAccept(a -> logDebug("[Reaction] Added role " + r.getName() + " to " + event.getUser().get().getDiscriminatedName())));
-                }
             }
         });
 
         moepsBot.getDiscordApi().addReactionRemoveListener(event -> {
-            if (event.getUser().isPresent() && event.getServer().isPresent() && event.getEmoji().isCustomEmoji()) {
-                Config config = getConfig(event.getServer().get());
-                String path = "reactions." + event.getMessageId() + "." + event.getEmoji().asCustomEmoji().get().getName();
-                if (config != null && config.hasPath(path)) {
-                    event.getServer().get()
-                            .getRoleById(config.getLong(path))
-                            .filter(r -> r.hasUser(event.getUser().get()))
-                            .ifPresent(r -> event.getUser().get().removeRole(r)
-                                    .thenAccept(a -> logDebug("[Reaction] Removed role " + r.getName() + " from " + event.getUser().get().getDiscriminatedName())));
-                }
+            if (event.getUser().isPresent() && event.getServer().isPresent()) {
+                getEmojiRole(event.getServer().get(), event.getMessageId(), event.getEmoji())
+                        .filter(r -> r.hasUser(event.getUser().get()))
+                        .ifPresent(r -> event.getUser().get().removeRole(r)
+                                .thenAccept(a -> logDebug("[Reaction] Removed role " + r.getName() + " from " + event.getUser().get().getDiscriminatedName())));
             }
         });
 
@@ -111,6 +103,24 @@ public class RoleManager extends Manager {
                 return true;
             });
         }
+    }
+
+    private Optional<Role> getEmojiRole(Server server, long messageId, Emoji emoji) {
+        Config config = getConfig(server);
+        if (config != null) {
+            String emojiName = emoji.isCustomEmoji()
+                    ? emoji.asCustomEmoji().get().getName()
+                    : emoji.isUnicodeEmoji()
+                    ? EmojiManager.getEmoji(emoji.asUnicodeEmoji().get()).get().getDescription().replace(' ', '_')
+                    : null;
+            if (emojiName != null) {
+                String path = "reactions." + messageId + "." + emojiName;
+                if (config.hasPath(path)) {
+                    return server.getRoleById(config.getLong(path));
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     private boolean updateRoles(User user, Collection<Activity> activities) {
